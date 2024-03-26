@@ -1,6 +1,6 @@
 import re
 
-class FOLNode:
+class Expression:
     def __init__(self, token):
         self.token = token
     # TODO: __str__
@@ -11,20 +11,20 @@ class FOLNode:
     def simplify(self):
         return self
 
-class VariableNode(FOLNode):
+class VariableExpression(Expression):
     def __init__(self, symbol):
         self.symbol = symbol
     def __str__(self):
         return self.symbol
 
-class PredicateNode(FOLNode):
-    def __init__(self, symbol, var_nodes: list[VariableNode]):
+class PredicateExpression(Expression):
+    def __init__(self, symbol, var_nodes: list[VariableExpression]):
         self.var_nodes = var_nodes
         self.symbol = symbol
     def __str__(self):
         return f'{self.symbol}({", ".join(map(lambda x: x.symbol, self.var_nodes))})'
 
-class AndNode(FOLNode):
+class AndExpression(Expression):
     def __init__(self, left_operand, right_operand):
         self.left = left_operand
         self.right = right_operand
@@ -38,7 +38,7 @@ class AndNode(FOLNode):
         self.right = self.right.simplify()
         return self
 
-class OrNode(FOLNode):
+class OrExpression(Expression):
     def __init__(self, left_operand, right_operand):
         self.left = left_operand
         self.right = right_operand
@@ -52,7 +52,7 @@ class OrNode(FOLNode):
         self.right = self.right.simplify()
         return self
 
-class NegateNode(FOLNode):
+class NegationExpression(Expression):
     def __init__(self, operand):
         self.operand = operand
         self.token = '-'
@@ -61,11 +61,11 @@ class NegateNode(FOLNode):
         return f'-({self.operand})'
     
     def simplify(self):
-        if isinstance(self.operand, NegateNode):
+        if isinstance(self.operand, NegationExpression):
             return self.operand.operand.simplify()
         return self.operand.simplify()
 
-class ExistsNode(FOLNode):
+class ExistsExpression(Expression):
     def __init__(self, variable, formula):
         self.variable = variable
         self.formula = formula
@@ -78,7 +78,7 @@ class ExistsNode(FOLNode):
         self.formula = self.formula.simplify()
         return self
 
-class ImplicationNode(FOLNode):
+class ImplicationExpression(Expression):
     def __init__(self, left_operand, right_operand):
         self.left = left_operand
         self.right = right_operand
@@ -92,7 +92,7 @@ class ImplicationNode(FOLNode):
         self.right = self.right.simplify()
         return self
 
-class AllNode(FOLNode):
+class AllExpression(Expression):
     def __init__(self, variable, formula):
         self.variable = variable
         self.formula = formula
@@ -105,7 +105,7 @@ class AllNode(FOLNode):
         self.formula = self.formula.simplify()
         return self
 
-class EquivalenceNode(FOLNode):
+class EquivalenceExpression(Expression):
     def __init__(self, left_operand, right_operand):
         self.left = left_operand
         self.right = right_operand
@@ -117,7 +117,7 @@ class EquivalenceNode(FOLNode):
     def simplify(self):
         self.left = self.left.simplify()
         self.right = self.right.simplify()
-        return self & AndNode(ImplicationNode(self.left, self.right), ImplicationNode(self.right, self.left))
+        return self & AndExpression(ImplicationExpression(self.left, self.right), ImplicationExpression(self.right, self.left))
 
 
 class Tokens:
@@ -203,16 +203,16 @@ class LogicParser:
         except IndexError as e:
             raise Exception(f"Ran out of tokens at index {self._currentIndex + 1}")
 
-    def parse(self) -> FOLNode:
+    def parse(self) -> Expression:
         self._current_index = 0;
         expr = self.parse_expression()
         return expr
     
-    def parse_expression(self) -> FOLNode:
+    def parse_expression(self) -> Expression:
         #get next token
         tok = self.token()
         if tok.type == Tokens.IDENTIFIER:
-            self.parse_variable(tok)
+            self.handle_identifier(tok)
         elif tok.type == Tokens.NOT:
             self.parse_negation(tok)
         elif tok.type in Tokens.QUANTS:
@@ -221,10 +221,13 @@ class LogicParser:
             self.parse_open(tok)
         raise Exception("didn't expect to be here")
     
-    def parse_variable(self, tok: Tokens.Token):
-        pass
+    def handle_identifier(self, tok: Tokens.Token):
+        # It's either: 1) a predicate expression: sees(x,y)
+        #             2) an application expression: P(x)
+        #             3) a solo variable: john OR x
+        return VariableExpression(symbol=tok.value)
     def parse_negation(self, tok: Tokens.Token):
-        pass
+        return NegationExpression(self.parse_expression())
     def parse_quantifier(self, tok: Tokens.Token):
         pass
     def parse_quantifier(self, tok: Tokens.Token):

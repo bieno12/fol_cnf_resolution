@@ -1,7 +1,7 @@
 from logic_parser import *
 
 
-expr = AllNode(VariableNode("y"), ExistsNode(VariableNode("x"), NegateNode(AndNode(ImplicationNode(VariableNode("C"), VariableNode("D")), PredicateNode("father", [VariableNode("A"), VariableNode("B")])))))
+expr = AllExpression(VariableExpression("y"), ExistsExpression(VariableExpression("x"), NegationExpression(AndExpression(ImplicationExpression(VariableExpression("C"), VariableExpression("D")), PredicateExpression("father", [VariableExpression("A"), VariableExpression("B")])))))
 
 print(expr)
 parser = LogicParser(str(expr));
