@@ -3,31 +3,50 @@ import re
 class Expression:
     def __init__(self, token):
         self.token = token
-    # TODO: __str__
-    # TODO: simplify
     def __str__(self):
         return ""
-
     def simplify(self):
         return self
+    def apply(self, fn):
+        pass
+    def copy(self):
+        pass
+    def children(self):
+        pass
+
 
 class VariableExpression(Expression):
     def __init__(self, symbol):
-        self.symbol = symbol
+        self.symbol: str = symbol
     def __str__(self):
         return self.symbol
+    def apply(self, fn):
+        fn(self)
+    def copy(self):
+        return VariableExpression(self.symbol)
+    def children(self):
+        return []
 
 class PredicateExpression(Expression):
     def __init__(self, symbol, var_nodes: list[VariableExpression]):
         self.var_nodes = var_nodes
-        self.symbol = symbol
+        self.symbol: str = symbol
     def __str__(self):
         return f'{self.symbol}({", ".join(map(lambda x: x.symbol, self.var_nodes))})'
+    def apply(self, fn):
+        fn(self)
+        for node in self.var_nodes:
+            node.apply(fn)
+    def copy(self):
+        var_nodes_cpy = [node.copy() for node in self.var_nodes]
+        return PredicateExpression(self.symbol, var_nodes_cpy)
+    def children(self):
+        return self.var_nodes
 
 class AndExpression(Expression):
     def __init__(self, left_operand, right_operand):
-        self.left = left_operand
-        self.right = right_operand
+        self.left: Expression = left_operand
+        self.right: Expression = right_operand
         self.token = '&'
     
     def __str__(self):
@@ -37,12 +56,21 @@ class AndExpression(Expression):
         self.left = self.left.simplify()
         self.right = self.right.simplify()
         return self
+    def apply(self, fn):
+        fn(self)
+        self.left.apply(fn)
+        self.right.apply(fn)
+    
+    def copy(self):
+        return AndExpression(self.left.copy(), self.right.copy())
+    def children(self):
+        return [self.left, self.right]
 
 class OrExpression(Expression):
     def __init__(self, left_operand, right_operand):
-        self.left = left_operand
-        self.right = right_operand
-        self.token = '|'
+        self.left: Expression = left_operand
+        self.right: Expression = right_operand
+        self.token: str = '|'
     
     def __str__(self):
         return f'({self.left}) | ({self.right})'
@@ -51,38 +79,23 @@ class OrExpression(Expression):
         self.left = self.left.simplify()
         self.right = self.right.simplify()
         return self
-
-class NegationExpression(Expression):
-    def __init__(self, operand):
-        self.operand = operand
-        self.token = '-'
     
-    def __str__(self):
-        return f'-({self.operand})'
+    def apply(self, fn):
+        fn(self)
+        self.left.apply(fn)
+        self.right.apply(fn)
     
-    def simplify(self):
-        if isinstance(self.operand, NegationExpression):
-            return self.operand.operand.simplify()
-        return self.operand.simplify()
-
-class ExistsExpression(Expression):
-    def __init__(self, variable, formula):
-        self.variable = variable
-        self.formula = formula
-        self.token = 'exists'
+    def copy(self):
+        return OrExpression(self.left.copy(), self.right.copy())
     
-    def __str__(self):
-        return f'exists {self.variable} ({self.formula})'
-    
-    def simplify(self):
-        self.formula = self.formula.simplify()
-        return self
+    def children(self):
+        return [self.left, self.right]
 
 class ImplicationExpression(Expression):
     def __init__(self, left_operand, right_operand):
-        self.left = left_operand
-        self.right = right_operand
-        self.token = '->'
+        self.left: Expression = left_operand
+        self.right: Expression = right_operand
+        self.token: str = '->'
 
     def __str__(self):
         return f'({self.left}) -> ({self.right})'
@@ -91,25 +104,22 @@ class ImplicationExpression(Expression):
         self.left = self.left.simplify()
         self.right = self.right.simplify()
         return self
-
-class AllExpression(Expression):
-    def __init__(self, variable, formula):
-        self.variable = variable
-        self.formula = formula
-        self.token = 'all'
-
-    def __str__(self):
-        return f'all {self.variable} ({self.formula})'
-
-    def simplify(self):
-        self.formula = self.formula.simplify()
-        return self
-
+    
+    def apply(self, fn):
+        fn(self)
+        self.left.apply(fn)
+        self.right.apply(fn)
+    def copy(self):
+        return ImplicationExpression(self.left.copy(), self.right.copy())
+    
+    def children(self):
+        return [self.left, self.right]
+    
 class EquivalenceExpression(Expression):
     def __init__(self, left_operand, right_operand):
-        self.left = left_operand
-        self.right = right_operand
-        self.token = '<->'
+        self.left: Expression = left_operand
+        self.right: Expression = right_operand
+        self.token: str = '<->'
 
     def __str__(self):
         return f'({self.left}) <-> ({self.right})'
@@ -118,7 +128,84 @@ class EquivalenceExpression(Expression):
         self.left = self.left.simplify()
         self.right = self.right.simplify()
         return self & AndExpression(ImplicationExpression(self.left, self.right), ImplicationExpression(self.right, self.left))
+    
+    def apply(self, fn):
+        fn(self)
+        self.left.apply(fn)
+        self.right.apply(fn)
+    
+    def copy(self):
+        return EquivalenceExpression(self.left.copy(), self.right.copy())
+    
+    def children(self):
+        return [self.left, self.right]
 
+class NegationExpression(Expression):
+    def __init__(self, operand):
+        self.operand: Expression = operand
+        self.token: str = '-'
+    
+    def __str__(self):
+        return f'-({self.operand})'
+    
+    def simplify(self):
+        if isinstance(self.operand, NegationExpression):
+            return self.operand.operand.simplify()
+        return self.operand.simplify()
+    def apply(self, fn):
+        fn(self)
+        self.operand.apply(fn)
+    def copy(self):
+        return NegationExpression(self.operand.copy())
+    def children(self):
+        return [self.operand]
+    
+class ExistsExpression(Expression):
+    def __init__(self, variable, formula):
+        self.variable: Expression = variable
+        self.formula: Expression = formula
+        self.token: str = 'exists'
+    
+    def __str__(self):
+        return f'exists {self.variable} ({self.formula})'
+    
+    def simplify(self):
+        self.formula = self.formula.simplify()
+        return self
+    
+    def apply(self, fn):
+        fn(self)
+        self.variable.apply(fn)
+        self.formula.apply(fn)
+        
+    def copy(self):
+        return ExistsExpression(self.variable.copy(), self.formula.copy())
+    
+    def children(self):
+        return [self.variable, self.formula]
+    
+class AllExpression(Expression):
+    def __init__(self, variable, formula):
+        self.variable: Expression = variable
+        self.formula: Expression = formula
+        self.token: str = 'all'
+
+    def __str__(self):
+        return f'all {self.variable} ({self.formula})'
+
+    def simplify(self):
+        self.formula = self.formula.simplify()
+        return self
+    
+    def apply(self, fn):
+        fn(self)
+        self.variable.apply(fn)
+        self.formula.apply(fn)
+    def copy(self):
+        return AllExpression(self.variable.copy(), self.formula.copy())
+
+    def children(self):
+        return [self.variable, self.formula]
 
 class Tokens:
     class Token:
