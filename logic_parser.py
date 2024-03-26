@@ -120,9 +120,16 @@ class EquivalenceNode(FOLNode):
         return self & AndNode(ImplicationNode(self.left, self.right), ImplicationNode(self.right, self.left))
 
 
-
 class Tokens:
-
+    class Token:
+        def __init__(self, type, value = None) -> None:
+            self.type = type
+            self.value = value
+        def __str__(self):
+            if self.type == Tokens.IDENTIFIER:
+                return f'{self.type}({self.value})'
+            return self.type
+    IDENTIFIER = "Identifier"
     EXISTS = "exists"
     ALL = "all"
     OPEN = "("
@@ -141,27 +148,84 @@ class Tokens:
 
     # Special
     SYMBOLS = [x for x in TOKENS if re.match(r"^[-\\.(),!&^|>=<]*$", x)]
-    
-    def tokenize(expression: str):
+
+
+class LogicParser:
+    def __init__(self, expression: str) -> None:
+        self.expression = expression
+
+        self.tokens = self.tokenize(self.expression)
+        self.operator_precedence = [
+            Tokens.NOT,
+            Tokens.QUANTS,
+            Tokens.AND,
+            Tokens.OR,
+            Tokens.IMP,
+            Tokens.IFF,
+        ]
+
+    def tokenize(self, expression: str) -> list[Tokens.Token]:
         tokens = []
         while len(expression) > 0:
             expression = expression.strip()
             found = False
             for token in Tokens.TOKENS:
                 if expression.startswith(token):
-                    tokens.append(token)
-                    expression = expression[len(token):].strip()
+                    tokens.append(Tokens.Token(type=token))
+                    expression = expression[len(token):]
                     found = True
                     break; 
             if not found:
-                # Handle other cases, like identifiers or numbers
-                # Here you need to define how to extract them
-                # For simplicity, let's assume identifiers can be alphanumeric
                 match = re.match(r'^[a-zA-Z0-9]+', expression)
                 if match:
-                    tokens.append(match.group())
+                    tokens.append(Tokens.Token(Tokens.IDENTIFIER, value= match.group()))
                     expression = expression[len(match.group()):].strip()
                 else:
                     print(tokens)
                     raise ValueError("Invalid expression")
         return tokens
+
+    def consume_token(self, type):
+        if(self._current_index >= len(self.tokens)) or self.tokens[self._current_index].type != type:
+            raise Exception(f"Missing Token of type({type})")
+        t = self.tokens[self._current_index]
+        self._current_index += 1;
+        return t
+    
+    def token(self, location = None) -> Tokens.Token:
+        try:
+            if location is None:
+                tok = self._buffer[self._currentIndex]
+                self._currentIndex += 1
+            else:
+                tok = self._buffer[self._currentIndex + location]
+            return tok
+        except IndexError as e:
+            raise Exception(f"Ran out of tokens at index {self._currentIndex + 1}")
+
+    def parse(self) -> FOLNode:
+        self._current_index = 0;
+        expr = self.parse_expression()
+        return expr
+    
+    def parse_expression(self) -> FOLNode:
+        #get next token
+        tok = self.token()
+        if tok.type == Tokens.IDENTIFIER:
+            self.parse_variable(tok)
+        elif tok.type == Tokens.NOT:
+            self.parse_negation(tok)
+        elif tok.type in Tokens.QUANTS:
+            self.parse_quantifier(tok)
+        elif tok.type == Tokens.OPEN:
+            self.parse_open(tok)
+        raise Exception("didn't expect to be here")
+    
+    def parse_variable(self, tok: Tokens.Token):
+        pass
+    def parse_negation(self, tok: Tokens.Token):
+        pass
+    def parse_quantifier(self, tok: Tokens.Token):
+        pass
+    def parse_quantifier(self, tok: Tokens.Token):
+        pass
