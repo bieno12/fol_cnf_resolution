@@ -156,13 +156,24 @@ class LogicParser:
 
         self.tokens = self.tokenize(self.expression)
         self.operator_precedence = [
-            Tokens.NOT,
+            [Tokens.NOT],
             Tokens.QUANTS,
-            Tokens.AND,
-            Tokens.OR,
-            Tokens.IMP,
-            Tokens.IFF,
+            [Tokens.AND],
+            [Tokens.OR],
+            [Tokens.IMP],
+            [Tokens.IFF],
         ]
+    def get_priority(self, type: str):
+        for i,l in enumerate(self.operator_precedence):
+            if type in l: return i
+        return 999
+    def has_priority(self, tok: str, context):
+        if context == None:
+            return True
+        return self.get_priority(tok) < self.get_priority(context.type)
+    
+    def print_tokens(self):
+        print(list(map(lambda x: str(x), self.tokens)))
 
     def tokenize(self, expression: str) -> list[Tokens.Token]:
         tokens = []
@@ -186,49 +197,140 @@ class LogicParser:
         return tokens
 
     def consume_token(self, type):
-        if(self._current_index >= len(self.tokens)) or self.tokens[self._current_index].type != type:
+        if(self.current_index >= len(self.tokens)) or self.tokens[self.current_index].type != type:
             raise Exception(f"Missing Token of type({type})")
-        t = self.tokens[self._current_index]
-        self._current_index += 1;
+        t = self.tokens[self.current_index]
+        self.current_index += 1;
         return t
-    
+    def in_range(self, loc = 0):
+        return self.current_index + loc < len(self.tokens)
     def token(self, location = None) -> Tokens.Token:
         try:
             if location is None:
-                tok = self._buffer[self._currentIndex]
-                self._currentIndex += 1
+                tok = self.tokens[self.current_index]
+                self.current_index += 1
             else:
-                tok = self._buffer[self._currentIndex + location]
+                tok = self.tokens[self.current_index + location]
             return tok
         except IndexError as e:
-            raise Exception(f"Ran out of tokens at index {self._currentIndex + 1}")
+            raise Exception(f"Ran out of tokens at index {self.current_index + 1}")
 
     def parse(self) -> Expression:
-        self._current_index = 0;
+        self.current_index = 0;
         expr = self.parse_expression()
         return expr
     
-    def parse_expression(self) -> Expression:
+    def parse_expression(self, context = None) -> Expression:
         #get next token
-        tok = self.token()
-        if tok.type == Tokens.IDENTIFIER:
-            self.handle_identifier(tok)
-        elif tok.type == Tokens.NOT:
-            self.parse_negation(tok)
-        elif tok.type in Tokens.QUANTS:
-            self.parse_quantifier(tok)
-        elif tok.type == Tokens.OPEN:
-            self.parse_open(tok)
-        raise Exception("didn't expect to be here")
+        tok = self.token(0)
+        accum = self.handle(context)
+
+        return self.handle_binops(accum, context)
     
-    def handle_identifier(self, tok: Tokens.Token):
+    def handle(self, context):
+        tok = self.token(0)
+        if tok.type == Tokens.IDENTIFIER:
+            return self.handle_identifier()
+        elif tok.type == Tokens.NOT:
+            return self.parse_negation()
+        elif tok.type in Tokens.QUANTS:
+            return self.handle_quantifier()
+        elif tok.type == Tokens.OPEN:
+            return self.handle_open()
+        raise Exception("didn't expect to be here")
+
+    def handle_identifier(self):
         # It's either: 1) a predicate expression: sees(x,y)
-        #             2) an application expression: P(x)
         #             3) a solo variable: john OR x
-        return VariableExpression(symbol=tok.value)
-    def parse_negation(self, tok: Tokens.Token):
-        return NegationExpression(self.parse_expression())
-    def parse_quantifier(self, tok: Tokens.Token):
-        pass
-    def parse_quantifier(self, tok: Tokens.Token):
-        pass
+        if self.in_range(1) and self.token(1).type == Tokens.OPEN:
+            return self.parse_predicate()
+        else:
+            return self.parse_variable()
+        
+    def parse_predicate(self):
+        perdicate_name = self.consume_token(Tokens.IDENTIFIER).value;
+        variables_list = []
+        self.consume_token(Tokens.OPEN)
+        #parsing variable list
+        variables_list.append(self.parse_variable())
+        try:
+            while self.token(0).type == Tokens.COMMA:
+                self.consume_token(Tokens.COMMA)
+                variables_list.append(self.parse_variable())
+        except:
+            pass
+        #parse closing bracket
+        self.consume_token(Tokens.CLOSE)
+        return PredicateExpression(perdicate_name, variables_list)
+
+    def parse_variable(self):
+        tok = self.consume_token(Tokens.IDENTIFIER)
+        return VariableExpression(tok.value)
+    def parse_negation(self):
+        t = self.consume_token(Tokens.NOT)
+        return NegationExpression(self.parse_expression(t))
+    def handle_quantifier(self):
+        print("type:" , self.token(0))
+        if self.token(0).type == Tokens.ALL:
+            return self.parse_all_exp()
+        elif self.token(0).type == Tokens.EXISTS:
+            return self.parse_exists_exp()
+        else:
+            raise Exception("Shouldnt be here")
+
+    def parse_all_exp(self):
+        t= self.consume_token(Tokens.ALL)
+        variable = self.parse_variable()
+        formula = self.parse_expression()
+        return AllExpression(variable, formula)
+    def parse_exists_exp(self):
+        t = self.consume_token(Tokens.EXISTS)
+        variable = self.parse_variable()
+        formula = self.parse_expression()
+        return ExistsExpression(variable, formula)
+    def handle_open(self):
+        self.consume_token(Tokens.OPEN)
+        exp = self.parse_expression()
+        self.consume_token(Tokens.CLOSE)
+        return exp
+   
+    def handle_binops(self,expression: Expression,  context: Tokens.Token):
+        cur_idx = None
+        while cur_idx != self.current_index:  # while adjuncts are added
+            cur_idx = self.current_index
+
+            expression = self.attempt_AndExpression(expression, context)
+            expression = self.attempt_OrExpression(expression, context)
+            expression = self.attempt_ImplicationExpression(expression, context)
+            expression = self.attempt_EquivExpression(expression, context)
+        return expression
+    
+    def attempt_AndExpression(self, expression: Expression,context: Tokens.Token):
+        if not self.in_range(0) or not self.has_priority(Tokens.AND, context): 
+            return expression
+        if self.token(0).type == Tokens.AND:
+            return AndExpression(expression, self.parse_expression(self.token()))
+        else:
+            return expression
+    def attempt_OrExpression(self, expression: Expression, context: Tokens.Token):
+        if not self.in_range(0) or not self.has_priority(Tokens.OR, context): 
+            return expression
+        if self.token(0).type == Tokens.OR:
+            return OrExpression(expression, self.parse_expression(self.token()))
+        else:
+            return expression
+
+    def attempt_ImplicationExpression(self, expression: Expression, context: Tokens.Token):
+        if not self.in_range(0) or not self.has_priority(Tokens.IMP, context): 
+            return expression
+        if self.token(0).type == Tokens.IMP:
+            return ImplicationExpression(expression, self.parse_expression(self.token()))
+        else:
+            return expression
+    def attempt_EquivExpression(self, expression: Expression, context: Tokens.Token):
+        if not self.in_range(0) or not self.has_priority(Tokens.IFF, context): 
+            return expression
+        if self.token(0).type == Tokens.IFF:
+            return EquivalenceExpression(expression, self.parse_expression(self.token()))
+        else:
+            return expression
