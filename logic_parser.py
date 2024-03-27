@@ -26,14 +26,18 @@ class Expression:
     def conjunctive_form(self):
         return self
 class VariableExpression(Expression):
-    def __init__(self, symbol):
+    CONSTANT = 'constant'
+    QUANT_VARIABLE = 'quan_variable'
+    SKELOM = 'skelom'
+    def __init__(self, symbol, type = 'constant'):
         self.symbol: str = symbol
+        self.type = type
     def str(self):
         return self.symbol
     def apply(self, fn, order='post'):
         return fn(self)
     def copy(self):
-        return VariableExpression(self.symbol)
+        return VariableExpression(self.symbol, self.type)
     def children(self):
         return []
     def rename(self, var_count, var_mapping):
@@ -348,7 +352,15 @@ class NegationExpression(Expression):
 class ExistsExpression(Expression):
     def __init__(self, variable, formula):
         self.variable: Expression = variable
-        self.formula: Expression = formula
+        def update_var_type(exp):
+            if isinstance(exp, VariableExpression):
+                if self.variable.symbol == exp.symbol:
+                    exp.type = VariableExpression.QUANT_VARIABLE
+            return exp
+        if formula != None:
+            self.formula: Expression = formula.apply(update_var_type)
+        else:
+            self.formula = None
         self.token: str = 'exists'
     
     def str(self):
@@ -392,7 +404,15 @@ class ExistsExpression(Expression):
 class AllExpression(Expression):
     def __init__(self, variable, formula):
         self.variable: Expression = variable
-        self.formula: Expression = formula
+        def update_var_type(exp):
+            if isinstance(exp, VariableExpression):
+                if self.variable.symbol == exp.symbol:
+                    exp.type = VariableExpression.QUANT_VARIABLE
+            return exp
+        if formula != None:
+            self.formula: Expression = formula.apply(update_var_type)
+        else:
+            self.formula = None
         self.token: str = 'all'
 
     def str(self):
@@ -578,27 +598,27 @@ class LogicParser:
         if self.in_range(1) and self.token(1).type == Tokens.OPEN:
             return self.parse_predicate()
         else:
-            return self.parse_variable()
+            return self.parse_variable(VariableExpression.CONSTANT)
         
     def parse_predicate(self):
         perdicate_name = self.consume_token(Tokens.IDENTIFIER).value;
         variables_list = []
         self.consume_token(Tokens.OPEN)
         #parsing variable list
-        variables_list.append(self.parse_variable())
+        variables_list.append(self.parse_variable(VariableExpression.CONSTANT))
         try:
             while self.token(0).type == Tokens.COMMA:
                 self.consume_token(Tokens.COMMA)
-                variables_list.append(self.parse_variable())
+                variables_list.append(self.parse_variable(VariableExpression.CONSTANT))
         except:
             pass
         #parse closing bracket
         self.consume_token(Tokens.CLOSE)
         return PredicateExpression(perdicate_name, variables_list)
 
-    def parse_variable(self):
+    def parse_variable(self, type):
         tok = self.consume_token(Tokens.IDENTIFIER)
-        return VariableExpression(tok.value)
+        return VariableExpression(tok.value, type)
     def parse_negation(self):
         t = self.consume_token(Tokens.NOT)
         return NegationExpression(self.parse_expression(t))
@@ -612,12 +632,12 @@ class LogicParser:
 
     def parse_all_exp(self):
         t= self.consume_token(Tokens.ALL)
-        variable = self.parse_variable()
+        variable = self.parse_variable(VariableExpression.QUANT_VARIABLE)
         formula = self.parse_expression()
         return AllExpression(variable, formula)
     def parse_exists_exp(self):
         t = self.consume_token(Tokens.EXISTS)
-        variable = self.parse_variable()
+        variable = self.parse_variable(VariableExpression.QUANT_VARIABLE)
         formula = self.parse_expression()
         return ExistsExpression(variable, formula)
     def handle_open(self):

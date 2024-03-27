@@ -124,7 +124,9 @@ class Resolution:
     #what is a clause
     #1 - a leaf
     #2 - leafs of an Or
-    
+    def compute_clauses(self):
+        self.clauses = self.collect_clauses()
+        return self
     def collect_clauses(self):
         clauses = []
         memo = set()
@@ -144,3 +146,6 @@ class Resolution:
         self.expression.copy().apply(find_orclause, 'pre');
         return clauses
     
+
+    def standardize_clauses():
+        pass
