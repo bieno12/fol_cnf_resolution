@@ -44,7 +44,9 @@ class Resolution:
                 .apply_demorgans().standardize_variable_scope() \
                 .prenex_normal_form()   \
                 .skolemize()    \
-                .conjunctive_form()
+                .conjunctive_form() \
+                .compute_clauses()  \
+                .standardize_clauses()
     
     def implication_elimination(self):
         self.expression = self.expression.copy().apply(eliminate_implication)
@@ -57,18 +59,21 @@ class Resolution:
         var_mapping={}
         self.expression = self.expression.copy().rename(var_count, var_mapping)
         return self
+    
+    def get_quantifiers(expression):
+        quantifiers = []
+        def get_quant(expr):
+            if isinstance(expr, lg.AllExpression) or isinstance(expr, lg.ExistsExpression):
+                quantifiers.append(expr.copy())
+            return expr
+        expression.copy().apply(get_quant)
+        return quantifiers
     def prenex_normal_form(self):
-        self.all_quantifiers = self.expression.get_quantifiers([])
-
-        if(len(self.all_quantifiers) == 0):
-            return self
-
+        self.all_quantifiers : list[lg.AllExpression | lg.ExistsExpression] = Resolution.get_quantifiers(self.expression)
         self.expression = self.expression.copy().apply(remove_quantifiers)
-        for i in range(len(self.all_quantifiers) - 1):
-            self.all_quantifiers[i].formula = self.all_quantifiers[i + 1]
-        
-        self.all_quantifiers[-1].formula = self.expression
-        self.expression = self.all_quantifiers[0].copy()
+        for quant in self.all_quantifiers:
+            quant.formula = self.expression
+            self.expression = quant
         return self
     def skolemize(self):
         def get_new_names():
@@ -110,6 +115,7 @@ class Resolution:
         def addtomemo(exp):
             memo.add(exp)
             return exp
+        
         def find_leaf(exp):
             if exp in memo:
                 return exp
@@ -147,5 +153,36 @@ class Resolution:
         return clauses
     
 
-    def standardize_clauses():
-        pass
+    def standardize_clauses(self):
+        count = 0
+        def get_next_name():
+            count
+            return f'var_{count}'
+        #get all quantifier vars in all clauses
+        names = []
+        def get_name(exp):
+            if isinstance(exp, lg.VariableExpression) and exp.type == lg.VariableExpression.QUANT_VARIABLE:
+                names.append(exp.symbol)
+            return exp
+        for clause in self.clauses:
+            for leaf in clause:
+                leaf.apply(get_name)
+        #map to new names
+        name_mapping = {}
+        for name in names:
+            name_mapping[name] = get_next_name()
+            count += 1
+        def change_name(exp):
+            if isinstance(exp, lg.VariableExpression):
+                if exp.symbol in name_mapping:
+                    exp.symbol = name_mapping[exp.symbol]
+            return exp
+        new_clauses = []
+        for clause in self.clauses:
+            new_clause = []
+            for leaf in clause:
+                new_clause.append(leaf.apply(change_name))
+            new_clauses.append(new_clause)
+        self.clauses = new_clauses
+        return self
+        
