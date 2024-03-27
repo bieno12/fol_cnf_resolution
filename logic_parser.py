@@ -21,7 +21,7 @@ class VariableExpression(Expression):
     def __str__(self):
         return self.symbol
     def apply(self, fn):
-        fn(self)
+        return fn(self)
     def copy(self):
         return VariableExpression(self.symbol)
     def children(self):
@@ -34,9 +34,11 @@ class PredicateExpression(Expression):
     def __str__(self):
         return f'{self.symbol}({", ".join(map(lambda x: x.symbol, self.var_nodes))})'
     def apply(self, fn):
-        fn(self)
-        for node in self.var_nodes:
-            node.apply(fn)
+        var_list = [node.apply(fn) for node in self.var_nodes]
+        self.var_nodes = var_list
+        expr = fn(self)
+        return expr
+        
     def copy(self):
         var_nodes_cpy = [node.copy() for node in self.var_nodes]
         return PredicateExpression(self.symbol, var_nodes_cpy)
@@ -50,6 +52,7 @@ class AndExpression(Expression):
         self.token = '&'
     
     def __str__(self):
+
         return f'({self.left}) & ({self.right})'
     
     def simplify(self):
@@ -57,9 +60,11 @@ class AndExpression(Expression):
         self.right = self.right.simplify()
         return self
     def apply(self, fn):
-        fn(self)
-        self.left.apply(fn)
-        self.right.apply(fn)
+        
+        self.left = self.left.apply(fn)
+        self.right = self.right.apply(fn)
+        expr = fn(self)
+        return expr
     
     def copy(self):
         return AndExpression(self.left.copy(), self.right.copy())
@@ -81,9 +86,10 @@ class OrExpression(Expression):
         return self
     
     def apply(self, fn):
-        fn(self)
-        self.left.apply(fn)
-        self.right.apply(fn)
+        self.left = self.left.apply(fn)
+        self.right = self.right.apply(fn)
+        expr = fn(self)
+        return expr
     
     def copy(self):
         return OrExpression(self.left.copy(), self.right.copy())
@@ -106,9 +112,10 @@ class ImplicationExpression(Expression):
         return self
     
     def apply(self, fn):
-        fn(self)
-        self.left.apply(fn)
-        self.right.apply(fn)
+        self.left = self.left.apply(fn)
+        self.right = self.right.apply(fn)
+        expr = fn(self)
+        return expr
     def copy(self):
         return ImplicationExpression(self.left.copy(), self.right.copy())
     
@@ -130,10 +137,10 @@ class EquivalenceExpression(Expression):
         return self & AndExpression(ImplicationExpression(self.left, self.right), ImplicationExpression(self.right, self.left))
     
     def apply(self, fn):
-        fn(self)
-        self.left.apply(fn)
-        self.right.apply(fn)
-    
+        self.left = self.left.apply(fn)
+        self.right = self.right.apply(fn)
+        expr = fn(self)
+        return expr
     def copy(self):
         return EquivalenceExpression(self.left.copy(), self.right.copy())
     
@@ -151,10 +158,15 @@ class NegationExpression(Expression):
     def simplify(self):
         if isinstance(self.operand, NegationExpression):
             return self.operand.operand.simplify()
-        return self.operand.simplify()
+        if isinstance(self.operand, AndExpression):
+            return OrExpression(NegationExpression(self.operand.left).simplify(), NegationExpression(self.operand.right).simplify())
+        if isinstance(self.operand, OrExpression):
+            return AndExpression(NegationExpression(self.operand.left).simplify(), NegationExpression(self.operand.right).simplify())
+        return self
     def apply(self, fn):
-        fn(self)
-        self.operand.apply(fn)
+        self.operand = self.operand.apply(fn)
+        expr = fn(self)
+        return expr
     def copy(self):
         return NegationExpression(self.operand.copy())
     def children(self):
@@ -174,15 +186,17 @@ class ExistsExpression(Expression):
         return self
     
     def apply(self, fn):
-        fn(self)
-        self.variable.apply(fn)
-        self.formula.apply(fn)
+        self.variable = self.variable.apply(fn)
+        self.formula = self.formula.apply(fn)
+        return fn(self)
         
     def copy(self):
         return ExistsExpression(self.variable.copy(), self.formula.copy())
     
     def children(self):
         return [self.variable, self.formula]
+    def rename(self):
+        
     
 class AllExpression(Expression):
     def __init__(self, variable, formula):
@@ -198,9 +212,9 @@ class AllExpression(Expression):
         return self
     
     def apply(self, fn):
-        fn(self)
-        self.variable.apply(fn)
-        self.formula.apply(fn)
+        self.variable = self.variable.apply(fn)
+        self.formula = self.formula.apply(fn)
+        return fn(self)
     def copy(self):
         return AllExpression(self.variable.copy(), self.formula.copy())
 
@@ -236,8 +250,28 @@ class Tokens:
     # Special
     SYMBOLS = [x for x in TOKENS if re.match(r"^[-\\.(),!&^|>=<]*$", x)]
 
-
+    operator_precedence = [
+            [NOT],
+            QUANTS,
+            [AND],
+            [OR],
+            [IMP],
+            [IFF],
+        ]
+    def get_priority(self, type: str):
+        for i,l in enumerate(self.operator_precedence):
+            if type in l: return i
+        return 999
+    def has_priority(self, tok: str, another):
+        if another == None:
+            return True
+        return self.get_priority(tok) < self.get_priority(another)
+    
+def parse_from_str(string: str):
+    parser = LogicParser(string)
+    return parser.parse()
 class LogicParser:
+
     def __init__(self, expression: str) -> None:
         self.expression = expression
 
@@ -357,7 +391,6 @@ class LogicParser:
         t = self.consume_token(Tokens.NOT)
         return NegationExpression(self.parse_expression(t))
     def handle_quantifier(self):
-        print("type:" , self.token(0))
         if self.token(0).type == Tokens.ALL:
             return self.parse_all_exp()
         elif self.token(0).type == Tokens.EXISTS:
