@@ -75,6 +75,7 @@ class Resolution:
             quant.formula = self.expression
             self.expression = quant
         return self
+    
     def skolemize(self):
         def get_new_names():
             count: int = 0
@@ -92,7 +93,7 @@ class Resolution:
             if isinstance(expression, lg.VariableExpression):
                 if expression.symbol in existential_var_to_constant:
                     expression.symbol = existential_var_to_constant[expression.symbol]
-
+                    expression.type = lg.VariableExpression.SKOLEM
             return expression
         
         self.expression = self.expression.copy().apply(rename_variable_names).apply(remove_quantifiers)
