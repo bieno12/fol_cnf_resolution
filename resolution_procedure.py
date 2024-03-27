@@ -39,14 +39,35 @@ class Resolution:
     def __str__(self):
         return str(self.expression)
 
-    def apply_all_steps(self):
-        return self.implication_elimination()   \
-                .apply_demorgans().standardize_variable_scope() \
-                .prenex_normal_form()   \
-                .skolemize()    \
-                .conjunctive_form() \
-                .compute_clauses()  \
-                .standardize_clauses()
+    def apply_all_steps(self, verbose = False):
+        self = self.implication_elimination() 
+        print("after implication elimination :-")
+        print(self)
+        self = self.apply_demorgans() 
+        print("after apply_demorgans :-")
+        print(self)
+        self = self.standardize_variable_scope() 
+        print("after standardize_variable_scope :-")
+        print(self)
+        self = self.prenex_normal_form() 
+        print("after prenex_normal_form :-")
+        print(self)
+        self = self.skolemize() 
+        print("after skolemize :-")
+        print(self)
+        self = self.conjunctive_form() 
+        print("after conjunctive_form :-")
+        print(self)
+        self = self.compute_clauses() 
+        print("after compute_clauses :-")
+        for clause in self.clauses:
+            print('{ ', ", ".join([str(x) for x in clause]),' }')
+        self = self.standardize_clauses() 
+        print("after standardize_clauses :-")
+        for clause in self.clauses:
+            print('{ ', ", ".join([str(x) for x in clause]),' }')
+
+        return self
     
     def implication_elimination(self):
         self.expression = self.expression.copy().apply(eliminate_implication)

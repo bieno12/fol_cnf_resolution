@@ -54,56 +54,38 @@ expr = parse_from_str('exists x -P(x) -> (all x exists y P(x, y) & Q(x, y))')
 print(expr)
 
 new_expr = Resolution(expr)
-
-new_expr.implication_elimination()
-print(new_expr)
-new_expr.apply_demorgans()
-print(new_expr)
-
-new_expr.standardize_variable_scope()
-print(new_expr)
-
-new_expr.prenex_normal_form()
-print(new_expr)
-
-new_expr.skolemize()
-print(new_expr)
-
-new_expr.conjunctive_form()
-print(new_expr)
+new_expr = new_expr.apply_all_steps(True)
 
 print('--------------------------------------------------------------------------------\n\n')
-expr = parse_from_str("a & b | c ")
-r = Resolution(expr).apply_all_steps()
-print(expr)
-print("after steps: ", r)
-print("clauses = ", [[str(y) for y in x] for x in r.collect_clauses()])
 
-expr = parse_from_str("a | c & d")
-r = Resolution(expr).apply_all_steps()
-print(expr)
-print("after steps: ", expr.conjunctive_form())
-print("clauses = ", [[str(y) for y in x] for x in r.collect_clauses()])
+# expr = parse_from_str("a & b | c ")
+# r = Resolution(expr).apply_all_steps()
+# print(expr)
+# print("after steps: ", r)
+# print("clauses = ", [[str(y) for y in x] for x in r.clauses])
 
-expr = parse_from_str("-a & b | -c & d")
-r = Resolution(expr).apply_all_steps()
-print(expr)
-print("after steps: ", expr.conjunctive_form())
-print("clauses = ", [[str(y) for y in x] for x in r.collect_clauses()])
+# expr = parse_from_str("a | c & d")
+# r = Resolution(expr).apply_all_steps()
+# print(expr)
+# print("after steps: ", r)
+# print("clauses = ", [[str(y) for y in x] for x in r.clauses])
 
-
-
-expr = parse_from_str("-a & b & c & d")
-r = Resolution(expr).apply_all_steps()
-print(expr)
-print("after steps: ", expr.conjunctive_form())
-
-print("clauses = ", [[str(y) for y in x] for x in r.collect_clauses()])
+# expr = parse_from_str("-a & b | -c & d")
+# r = Resolution(expr).apply_all_steps()
+# print(expr)
+# print("after steps: ", r)
+# print("clauses = ", [[str(y) for y in x] for x in r.clauses])
 
 
-expr = parse_from_str("a | b | P(x)")
-r = Resolution(expr).apply_all_steps()
-print(expr)
-print("after steps: ", expr.conjunctive_form())
+# expr = parse_from_str("-a & b & c & d")
+# r = Resolution(expr).apply_all_steps()
+# print(expr)
+# print("after steps: ", r)
+# print("clauses = ", [[str(y) for y in x] for x in r.clauses])
 
-print("clauses = ", [[str(y) for y in x] for x in r.collect_clauses()])
+
+# expr = parse_from_str("a | b | P(x)")
+# r = Resolution(expr).apply_all_steps()
+# print(expr)
+# print("after steps: ", r)
+# print("clauses = ", [[str(y) for y in x] for x in r.clauses])
