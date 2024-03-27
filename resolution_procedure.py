@@ -8,22 +8,21 @@ import logic_parser as lg
 
 
 def eliminate_implication(expression):
-    def is_implication(expr):
-        return isinstance(expr, lg.ImplicationExpression)
-    
-    if is_implication(expression):
+    if isinstance(expression, lg.ImplicationExpression):
         expression = lg.OrExpression(lg.NegationExpression(expression.left), expression.right)
-    
-    expression.apply(eliminate_implication)
-
     return expression
 
 class Resolution:
     def __init__(self, expr: lg.Expression):
         self.expression = expr.copy()
-    
+        self.quantifier_variables = {}
     def __str__(self):
         return str(self.expression)
 
-    def implication_elimination(self):
-        return self.expression.apply(eliminate_implication)
+    def implication_elimination(self,):
+        self.expression = self.expression.copy().apply(eliminate_implication)
+    
+    def apply_demorgans(self):
+        self.expression = self.expression.copy().simplify()
+    def standardize_variable_scope(self):
+         pass

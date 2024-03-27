@@ -1,5 +1,9 @@
 import re
 
+
+def bracket(str):
+    return f'({str})'
+
 class Expression:
     def __init__(self, token):
         self.token = token
@@ -56,12 +60,17 @@ class AndExpression(Expression):
         if not reduced_brackets:
             return f'({self.left}) & ({self.right})'
         else:
-            result = ''
-            if Tokens.has_priority(self.left.token, Tokens.AND):
-             result = result + f'{self.left.str(True)} '
+            left_term = ''
+            if Tokens.has_priority(self.left.token.type, Tokens.AND):
+             left_term =  self.left.str(True)
             else:
-             result = result + f'{self.left.str(True)} '
-    
+             left_term =  f'({self.left.str(True)})'
+            right_term = ''
+            if Tokens.has_priority(self.left.token.type, Tokens.AND):
+             right_term =  self.left.str(True)
+            else:
+             right_term =  f'({self.left.str(True)}) '
+             return f'{left_term} & {right_term}'
     def simplify(self):
         self.left = self.left.simplify()
         self.right = self.right.simplify()
@@ -84,9 +93,21 @@ class OrExpression(Expression):
         self.right: Expression = right_operand
         self.token: str = '|'
     
-    def str(self):
-        return f'({self.left}) | ({self.right})'
-    
+    def str(self, reduced_brackets = False):
+        if not reduced_brackets:
+            return f'({self.left}) | ({self.right})'
+        else:
+            left_term = ''
+            if Tokens.has_priority(self.left.token.type, Tokens.AND):
+             left_term =  self.left.str(True)
+            else:
+             left_term =  f'({self.left.str(True)})'
+            right_term = ''
+            if Tokens.has_priority(self.left.token.type, Tokens.AND):
+             right_term =  self.left.str(True)
+            else:
+             right_term =  f'({self.left.str(True)}) '
+             return f'{left_term} | {right_term}'
     def simplify(self):
         self.left = self.left.simplify()
         self.right = self.right.simplify()
@@ -110,8 +131,21 @@ class ImplicationExpression(Expression):
         self.right: Expression = right_operand
         self.token: str = '->'
 
-    def str(self):
-        return f'({self.left}) -> ({self.right})'
+    def str(self, reduced_brackets = False):
+        if not reduced_brackets:
+            return f'({self.left}) -> ({self.right})'
+        else:
+            left_term = ''
+            if Tokens.has_priority(self.left.token.type, Tokens.AND):
+             left_term =  self.left.str(True)
+            else:
+             left_term =  f'({self.left.str(True)})'
+            right_term = ''
+            if Tokens.has_priority(self.left.token.type, Tokens.AND):
+             right_term =  self.left.str(True)
+            else:
+             right_term =  f'({self.left.str(True)}) '
+             return f'{left_term} -> {right_term}'
 
     def simplify(self):
         self.left = self.left.simplify()
