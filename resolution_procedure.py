@@ -28,9 +28,13 @@ def remove_quantifiers(expression):
     expression = remove_universal(expression)
     return expression
 
+
+
+
 class Resolution:
     def __init__(self, expr: lg.Expression):
         self.expression = expr.copy()
+        self.all_quantifiers = self.expression.copy().get_quantifiers([])
         
     def __str__(self):
         return str(self.expression)
@@ -45,10 +49,35 @@ class Resolution:
         self.expression = self.expression.copy().rename(var_count, var_mapping)
     
     def prenex_normal_form(self):
-        all_quantifiers = self.expression.copy().get_quantifiers([])
+        self.all_quantifiers = self.expression.get_quantifiers([])
         self.expression = self.expression.copy().apply(remove_quantifiers)
-        for i in range(len(all_quantifiers) - 1):
-            all_quantifiers[i].formula = all_quantifiers[i + 1]
+        for i in range(len(self.all_quantifiers) - 1):
+            self.all_quantifiers[i].formula = self.all_quantifiers[i + 1]
         
-        all_quantifiers[-1].formula = self.expression
-        self.expression = all_quantifiers[0].copy()
+        self.all_quantifiers[-1].formula = self.expression
+        self.expression = self.all_quantifiers[0].copy()
+
+    def skolemize(self):
+        def get_new_names():
+            count: int = 0
+            var_to_constant = {}
+            for quant in self.all_quantifiers:
+                if isinstance(quant, lg.ExistsExpression):
+                    var_to_constant[quant.variable.symbol] = chr(ord('A') + count)
+                    count += 1
+
+            return var_to_constant
+
+        existential_var_to_constant: dict[str, str] = get_new_names()
+
+        def rename_variable_names(expression):
+            if isinstance(expression, lg.VariableExpression):
+                if expression.symbol in existential_var_to_constant:
+                    expression.symbol = existential_var_to_constant[expression.symbol]
+
+            return expression
+        
+        self.expression = self.expression.copy().apply(rename_variable_names).apply(remove_quantifiers)
+        
+
+
