@@ -50,7 +50,7 @@ print()
 # all y exists x -C -> D & father(A, B)
 # expr = parse_from_str('-(-a & b -> c) ')
 
-expr = parse_from_str('exists x -P(x) -> (all x exists y P(x, y))')
+expr = parse_from_str('exists x -P(x) -> (all x exists y P(x, y) & Q(x, y))')
 print(expr)
 
 new_expr = Resolution(expr)
@@ -68,3 +68,22 @@ print(new_expr)
 
 new_expr.skolemize()
 print(new_expr)
+
+new_expr.conjunctive_form()
+
+
+print('--------------------------------------------------------------------------------\n\n')
+expr = parse_from_str("a & b | c ")
+print(expr)
+print("conjunctive: ", expr.conjunctive_form())
+
+expr = parse_from_str("a | c & d")
+print(expr)
+print("conjunctive: ", expr.conjunctive_form())
+expr = parse_from_str("a & b | c & d")
+print(expr)
+print("conjunctive: ", expr.conjunctive_form())
+
+expr = parse_from_str("a & b & c & d")
+print(expr)
+print("conjunctive: ", expr.conjunctive_form())

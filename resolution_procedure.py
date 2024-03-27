@@ -41,15 +41,15 @@ class Resolution:
 
     def implication_elimination(self):
         self.expression = self.expression.copy().apply(eliminate_implication)
-    
+        return self
     def apply_demorgans(self):
         self.expression = self.expression.copy().simplify()
-
+        return self
     def standardize_variable_scope(self):
         var_count=0
         var_mapping={}
         self.expression = self.expression.copy().rename(var_count, var_mapping)
-    
+        return self
     def prenex_normal_form(self):
         self.all_quantifiers = self.expression.get_quantifiers([])
         self.expression = self.expression.copy().apply(remove_quantifiers)
@@ -58,7 +58,7 @@ class Resolution:
         
         self.all_quantifiers[-1].formula = self.expression
         self.expression = self.all_quantifiers[0].copy()
-
+        return self
     def skolemize(self):
         def get_new_names():
             count: int = 0
@@ -80,6 +80,8 @@ class Resolution:
             return expression
         
         self.expression = self.expression.copy().apply(rename_variable_names).apply(remove_quantifiers)
-        
+        return self
 
-
+    def conjunctive_form(self):
+        self.expression = self.expression.conjunctive_form()
+        return self
