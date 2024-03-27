@@ -21,8 +21,6 @@ class Expression:
         return self.str()
     def rename(self, var_count, var_mapping):
         return self
-    def get_quantifiers(self, all_quants):
-        return all_quants
     def conjunctive_form(self):
         return self
 class VariableExpression(Expression):
@@ -45,8 +43,7 @@ class VariableExpression(Expression):
             return self
         self.symbol = f'{var_mapping[self.symbol]}'
         return self
-    def get_quantifiers(self, all_quants):
-        return all_quants
+
 
 class PredicateExpression(Expression):
     def __init__(self, symbol, var_nodes: list[VariableExpression]):
@@ -126,10 +123,6 @@ class AndExpression(Expression):
         self.right = self.right.rename(var_count, var_mapping)
         return self
     
-    def get_quantifiers(self, all_quants):
-        self.left.get_quantifiers(all_quants)
-        self.right.get_quantifiers(all_quants)
-        return all_quants
     def conjunctive_form(self):
         self.left = self.left.conjunctive_form()
         self.right = self.right.conjunctive_form()
@@ -184,10 +177,6 @@ class OrExpression(Expression):
         self.right = self.right.rename(var_count, var_mapping)
         return self
     
-    def get_quantifiers(self, all_quants):
-        self.left.get_quantifiers(all_quants)
-        self.right.get_quantifiers(all_quants)
-        return all_quants
     def conjunctive_form(self):
         if isinstance(self.left, AndExpression):
             andexpr = self.left
@@ -252,10 +241,6 @@ class ImplicationExpression(Expression):
         self.right = self.right.rename(var_count, var_mapping)
         return self
     
-    def get_quantifiers(self, all_quants):
-        self.left.get_quantifiers(all_quants)
-        self.right.get_quantifiers(all_quants)
-        return all_quants
     def conjunctive_form(self):
         self.left = self.left.conjunctive_form()
         self.right = self.right.conjunctive_form()
@@ -297,10 +282,6 @@ class EquivalenceExpression(Expression):
         self.right = self.right.rename(var_count, var_mapping)
         return self
     
-    def get_quantifiers(self, all_quants):
-        self.left.get_quantifiers(all_quants)
-        self.right.get_quantifiers(all_quants)
-        return all_quants
     def conjunctive_form(self):
         self.left = self.left.conjunctive_form()
         self.right = self.right.conjunctive_form()
@@ -342,9 +323,6 @@ class NegationExpression(Expression):
         self.operand = self.operand.rename(var_count, var_mapping)
         return self
     
-    def get_quantifiers(self, all_quants):
-        self.operand.get_quantifiers(all_quants)
-        return all_quants
     def conjunctive_form(self):
         self.operand = self.operand.conjunctive_form()
         return self
@@ -394,11 +372,6 @@ class ExistsExpression(Expression):
         self.formula = self.formula.rename(var_count + 1, var_mapping)
         return self
     
-    def get_quantifiers(self, all_quants):
-        all_quants.append(ExistsExpression(self.variable.copy(), None))
-        self.variable.get_quantifiers(all_quants)
-        self.formula.get_quantifiers(all_quants)
-        return all_quants
     def conjunctive_form(self):
         self.formula = self.formula.conjunctive_form()
         return self
@@ -445,12 +418,7 @@ class AllExpression(Expression):
         self.variable = self.variable.rename(var_count + 1, var_mapping)
         self.formula = self.formula.rename(var_count + 1, var_mapping)
         return self
-    
-    def get_quantifiers(self, all_quants):
-        all_quants.append(AllExpression(self.variable.copy(), None))
-        self.variable.get_quantifiers(all_quants)
-        self.formula.get_quantifiers(all_quants)
-        return all_quants
+
     def conjunctive_form(self):
         self.formula = self.formula.conjunctive_form()
         return self

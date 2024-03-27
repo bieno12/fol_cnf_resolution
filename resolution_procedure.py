@@ -34,7 +34,6 @@ def remove_quantifiers(expression):
 class Resolution:
     def __init__(self, expr: lg.Expression):
         self.expression = expr.copy()
-        self.all_quantifiers = self.expression.copy().get_quantifiers([])
         
     def __str__(self):
         return str(self.expression)
