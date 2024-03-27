@@ -70,20 +70,40 @@ new_expr.skolemize()
 print(new_expr)
 
 new_expr.conjunctive_form()
-
+print(new_expr)
 
 print('--------------------------------------------------------------------------------\n\n')
 expr = parse_from_str("a & b | c ")
+r = Resolution(expr).apply_all_steps()
 print(expr)
-print("conjunctive: ", expr.conjunctive_form())
+print("after steps: ", r)
+print("clauses = ", [[str(y) for y in x] for x in r.collect_clauses()])
 
 expr = parse_from_str("a | c & d")
+r = Resolution(expr).apply_all_steps()
 print(expr)
-print("conjunctive: ", expr.conjunctive_form())
-expr = parse_from_str("a & b | c & d")
-print(expr)
-print("conjunctive: ", expr.conjunctive_form())
+print("after steps: ", expr.conjunctive_form())
+print("clauses = ", [[str(y) for y in x] for x in r.collect_clauses()])
 
-expr = parse_from_str("a & b & c & d")
+expr = parse_from_str("-a & b | -c & d")
+r = Resolution(expr).apply_all_steps()
 print(expr)
-print("conjunctive: ", expr.conjunctive_form())
+print("after steps: ", expr.conjunctive_form())
+print("clauses = ", [[str(y) for y in x] for x in r.collect_clauses()])
+
+
+
+expr = parse_from_str("-a & b & c & d")
+r = Resolution(expr).apply_all_steps()
+print(expr)
+print("after steps: ", expr.conjunctive_form())
+
+print("clauses = ", [[str(y) for y in x] for x in r.collect_clauses()])
+
+
+expr = parse_from_str("a | b | P(x)")
+r = Resolution(expr).apply_all_steps()
+print(expr)
+print("after steps: ", expr.conjunctive_form())
+
+print("clauses = ", [[str(y) for y in x] for x in r.collect_clauses()])

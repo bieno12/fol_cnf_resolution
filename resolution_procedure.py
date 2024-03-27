@@ -39,6 +39,13 @@ class Resolution:
     def __str__(self):
         return str(self.expression)
 
+    def apply_all_steps(self):
+        return self.implication_elimination()   \
+                .apply_demorgans().standardize_variable_scope() \
+                .prenex_normal_form()   \
+                .skolemize()    \
+                .conjunctive_form()
+    
     def implication_elimination(self):
         self.expression = self.expression.copy().apply(eliminate_implication)
         return self
@@ -52,6 +59,10 @@ class Resolution:
         return self
     def prenex_normal_form(self):
         self.all_quantifiers = self.expression.get_quantifiers([])
+
+        if(len(self.all_quantifiers) == 0):
+            return self
+
         self.expression = self.expression.copy().apply(remove_quantifiers)
         for i in range(len(self.all_quantifiers) - 1):
             self.all_quantifiers[i].formula = self.all_quantifiers[i + 1]
@@ -85,3 +96,65 @@ class Resolution:
     def conjunctive_form(self):
         self.expression = self.expression.conjunctive_form()
         return self
+
+    #what is a leaf
+    #1 - lone variable or predicate
+    #2 - negated variable or predicate
+    def is_leaf(self, exp):
+        return isinstance(exp, lg.VariableExpression)   \
+                or isinstance(exp, lg.NegationExpression)  \
+                or isinstance(exp, lg.PredicateExpression)
+    def collect_leafs(self, expression):
+        leafs = []
+        memo = set()
+        def addtomemo(exp):
+            memo.add(exp)
+            return exp
+        
+        def find_negated_leaf(exp):
+            if exp in memo:
+                return exp
+            if isinstance(exp, lg.NegationExpression):
+                leafs.append(exp)
+                exp.apply(addtomemo)
+            return exp
+        def find_pred_leaf(exp):
+            if exp in memo:
+                return exp
+            if isinstance(exp, lg.PredicateExpression):
+                leafs.append(exp)
+                exp.apply(addtomemo)
+            return exp
+        def find_leaf(exp):
+            if exp in memo:
+                return exp
+            if self.is_leaf(exp):
+                leafs.append(exp)
+                exp.apply(addtomemo)
+            return exp
+        expression.copy().apply(find_negated_leaf).apply(find_pred_leaf).apply(find_leaf)
+        return leafs
+
+    #what is a clause
+    #1 - a leaf
+    #2 - leafs of an Or
+    
+    def collect_clauses(self):
+        clauses = []
+        memo = set()
+        def addtomemo(exp):
+            memo.add(exp)
+            return exp
+        
+        def find_orclause(expression):
+            if expression in memo:
+                return expression
+            if isinstance(expression, lg.OrExpression):
+                clauses.append(self.collect_leafs(expression))
+                print("found: ",expression)
+                expression.apply(addtomemo)
+                return expression
+            return expression
+        self.expression.copy().apply(find_orclause);
+        return clauses
+    

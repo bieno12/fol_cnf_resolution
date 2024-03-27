@@ -37,6 +37,8 @@ class VariableExpression(Expression):
     def children(self):
         return []
     def rename(self, var_count, var_mapping):
+        if not self.symbol in var_mapping:
+            return self
         self.symbol = f'{var_mapping[self.symbol]}'
         return self
     def get_quantifiers(self, all_quants):
