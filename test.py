@@ -63,4 +63,7 @@ print(new_expr)
 new_expr.standardize_variable_scope()
 print(new_expr)
 
+new_expr.prenex_normal_form()
+print(new_expr)
+
 
