@@ -11,7 +11,7 @@ class Expression:
         return ""
     def simplify(self):
         return self
-    def apply(self, fn):
+    def apply(self, fn, order='post'):
         pass
     def copy(self):
         pass
@@ -30,7 +30,7 @@ class VariableExpression(Expression):
         self.symbol: str = symbol
     def str(self):
         return self.symbol
-    def apply(self, fn):
+    def apply(self, fn, order='post'):
         return fn(self)
     def copy(self):
         return VariableExpression(self.symbol)
@@ -50,11 +50,17 @@ class PredicateExpression(Expression):
         self.symbol: str = symbol
     def str(self, reduced_brackets = False):
         return f'{self.symbol}({", ".join(map(lambda x: x.symbol, self.var_nodes))})'
-    def apply(self, fn):
-        var_list = [node.apply(fn) for node in self.var_nodes]
-        self.var_nodes = var_list
-        expr = fn(self)
-        return expr
+    def apply(self, fn, order='post'):
+        if order == 'post':
+            var_list = [node.apply(fn) for node in self.var_nodes]
+            self.var_nodes = var_list
+            expr = fn(self)
+            return expr
+        elif order == 'pre':
+            expr = fn(self)
+            var_list = [node.apply(fn) for node in expr.var_nodes]
+            expr.var_nodes = var_list
+            return expr
     def copy(self):
         var_nodes_cpy = [node.copy() for node in self.var_nodes]
         return PredicateExpression(self.symbol, var_nodes_cpy)
@@ -95,12 +101,17 @@ class AndExpression(Expression):
         self.right = self.right.simplify()
         return self
     
-    def apply(self, fn):
-        self.left = self.left.apply(fn)
-        self.right = self.right.apply(fn)
-        expr = fn(self)
-        return expr
-    
+    def apply(self, fn, order = 'post'):
+        if order == 'post':
+            self.left = self.left.apply(fn)
+            self.right = self.right.apply(fn)
+            expr = fn(self)
+            return expr
+        elif order == 'pre':
+            expr = fn(self)
+            expr.left = expr.left.apply(fn)
+            expr.right = expr.right.apply(fn)
+            return expr
     def copy(self):
         return AndExpression(self.left.copy(), self.right.copy())
     def children(self):
@@ -146,11 +157,17 @@ class OrExpression(Expression):
         self.right = self.right.simplify()
         return self
     
-    def apply(self, fn):
-        self.left = self.left.apply(fn)
-        self.right = self.right.apply(fn)
-        expr = fn(self)
-        return expr
+    def apply(self, fn, order = 'post'):
+        if order == 'post':
+            self.left = self.left.apply(fn)
+            self.right = self.right.apply(fn)
+            expr = fn(self)
+            return expr
+        elif order == 'pre':
+            expr = fn(self)
+            expr.left = expr.left.apply(fn)
+            expr.right = expr.right.apply(fn)
+            return expr
     
     def copy(self):
         return OrExpression(self.left.copy(), self.right.copy())
@@ -209,11 +226,17 @@ class ImplicationExpression(Expression):
         self.right = self.right.simplify()
         return self
     
-    def apply(self, fn):
-        self.left = self.left.apply(fn)
-        self.right = self.right.apply(fn)
-        expr = fn(self)
-        return expr
+    def apply(self, fn, order = 'post'):
+        if order == 'post':
+            self.left = self.left.apply(fn)
+            self.right = self.right.apply(fn)
+            expr = fn(self)
+            return expr
+        elif order == 'pre':
+            expr = fn(self)
+            expr.left = expr.left.apply(fn)
+            expr.right = expr.right.apply(fn)
+            return expr
     def copy(self):
         return ImplicationExpression(self.left.copy(), self.right.copy())
     
@@ -248,11 +271,17 @@ class EquivalenceExpression(Expression):
         self.right = self.right.simplify()
         return self & AndExpression(ImplicationExpression(self.left, self.right), ImplicationExpression(self.right, self.left))
     
-    def apply(self, fn):
-        self.left = self.left.apply(fn)
-        self.right = self.right.apply(fn)
-        expr = fn(self)
-        return expr
+    def apply(self, fn, order = 'post'):
+        if order == 'post':
+            self.left = self.left.apply(fn)
+            self.right = self.right.apply(fn)
+            expr = fn(self)
+            return expr
+        elif order == 'pre':
+            expr = fn(self)
+            expr.left = expr.left.apply(fn)
+            expr.right = expr.right.apply(fn)
+            return expr
     def copy(self):
         return EquivalenceExpression(self.left.copy(), self.right.copy())
     
@@ -290,11 +319,15 @@ class NegationExpression(Expression):
             return AndExpression(NegationExpression(self.operand.left).simplify(), NegationExpression(self.operand.right).simplify())
         return self
     
-    def apply(self, fn):
-        self.operand = self.operand.apply(fn)
-        expr = fn(self)
-        return expr
-    
+    def apply(self, fn, order = 'post'):
+        if order == 'post':
+            self.operand = self.operand.apply(fn)
+            expr = fn(self)
+            return expr
+        elif order == 'pre':
+            expr = fn(self)
+            expr.operand = expr.operand.apply(fn)
+            return expr
     def copy(self):
         return NegationExpression(self.operand.copy())
     
@@ -325,11 +358,16 @@ class ExistsExpression(Expression):
         self.formula = self.formula.simplify()
         return self
     
-    def apply(self, fn):
-        self.variable = self.variable.apply(fn)
-        self.formula = self.formula.apply(fn)
-        return fn(self)
-        
+    def apply(self, fn, order = 'post'):
+        if order == 'post':
+            self.variable = self.variable.apply(fn)
+            self.formula = self.formula.apply(fn)
+            return fn(self)
+        elif order == 'pre':
+            expr = fn(self)
+            expr.variable = expr.variable.apply(fn)
+            expr.formula = expr.formula.apply(fn)
+            return expr
     def copy(self):
         return ExistsExpression(self.variable.copy(), self.formula.copy())
     
@@ -364,10 +402,16 @@ class AllExpression(Expression):
         self.formula = self.formula.simplify()
         return self
     
-    def apply(self, fn):
-        self.variable = self.variable.apply(fn)
-        self.formula = self.formula.apply(fn)
-        return fn(self)
+    def apply(self, fn, order = 'post'):
+        if order == 'post':
+            self.variable = self.variable.apply(fn)
+            self.formula = self.formula.apply(fn)
+            return fn(self)
+        elif order == 'pre':
+            expr = fn(self)
+            expr.variable = expr.variable.apply(fn)
+            expr.formula = expr.formula.apply(fn)
+            return expr
     def copy(self):
         return AllExpression(self.variable.copy(), self.formula.copy())
 

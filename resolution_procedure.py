@@ -155,6 +155,6 @@ class Resolution:
                 expression.apply(addtomemo)
                 return expression
             return expression
-        self.expression.copy().apply(find_orclause);
+        self.expression.copy().apply(find_orclause, 'pre');
         return clauses
     
