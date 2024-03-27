@@ -21,6 +21,8 @@ class Expression:
         return self.str()
     def rename(self, var_count, var_mapping):
         return self
+    def get_quantifiers(self, all_quants):
+        return all_quants
 
 class VariableExpression(Expression):
     def __init__(self, symbol):
@@ -36,6 +38,8 @@ class VariableExpression(Expression):
     def rename(self, var_count, var_mapping):
         self.symbol = f'{var_mapping[self.symbol]}'
         return self
+    def get_quantifiers(self, all_quants):
+        return all_quants
     
 
 class PredicateExpression(Expression):
@@ -60,6 +64,9 @@ class PredicateExpression(Expression):
     def rename(self, var_count, var_mapping):
         self.var_nodes = [node.rename(var_count, var_mapping) for node in self.var_nodes]
         return self
+    
+    def get_quantifiers(self, all_quants):
+        return all_quants
 
 class AndExpression(Expression):
     def __init__(self, left_operand, right_operand):
@@ -89,7 +96,6 @@ class AndExpression(Expression):
         return self
     
     def apply(self, fn):
-        
         self.left = self.left.apply(fn)
         self.right = self.right.apply(fn)
         expr = fn(self)
@@ -104,6 +110,11 @@ class AndExpression(Expression):
         self.left = self.left.rename(var_count, var_mapping)
         self.right = self.right.rename(var_count, var_mapping)
         return self
+    
+    def get_quantifiers(self, all_quants):
+        self.left.get_quantifiers(all_quants)
+        self.right.get_quantifiers(all_quants)
+        return all_quants
 
 class OrExpression(Expression):
     def __init__(self, left_operand, right_operand):
@@ -148,6 +159,11 @@ class OrExpression(Expression):
         self.right = self.right.rename(var_count, var_mapping)
         return self
     
+    def get_quantifiers(self, all_quants):
+        self.left.get_quantifiers(all_quants)
+        self.right.get_quantifiers(all_quants)
+        return all_quants
+    
 class ImplicationExpression(Expression):
     def __init__(self, left_operand, right_operand):
         self.left: Expression = left_operand
@@ -191,6 +207,11 @@ class ImplicationExpression(Expression):
         self.right = self.right.rename(var_count, var_mapping)
         return self
     
+    def get_quantifiers(self, all_quants):
+        self.left.get_quantifiers(all_quants)
+        self.right.get_quantifiers(all_quants)
+        return all_quants
+    
 class EquivalenceExpression(Expression):
     def __init__(self, left_operand, right_operand):
         self.left: Expression = left_operand
@@ -220,6 +241,11 @@ class EquivalenceExpression(Expression):
         self.left = self.left.rename(var_count, var_mapping)
         self.right = self.right.rename(var_count, var_mapping)
         return self
+    
+    def get_quantifiers(self, all_quants):
+        self.left.get_quantifiers(all_quants)
+        self.right.get_quantifiers(all_quants)
+        return all_quants
 
 class NegationExpression(Expression):
     def __init__(self, operand):
@@ -253,6 +279,10 @@ class NegationExpression(Expression):
         self.operand = self.operand.rename(var_count, var_mapping)
         return self
     
+    def get_quantifiers(self, all_quants):
+        self.operand.get_quantifiers(all_quants)
+        return all_quants
+    
 class ExistsExpression(Expression):
     def __init__(self, variable, formula):
         self.variable: Expression = variable
@@ -283,6 +313,12 @@ class ExistsExpression(Expression):
         self.formula = self.formula.rename(var_count + 1, var_mapping)
         return self
     
+    def get_quantifiers(self, all_quants):
+        all_quants.append(ExistsExpression(self.variable.copy(), None))
+        self.variable.get_quantifiers(all_quants)
+        self.formula.get_quantifiers(all_quants)
+        return all_quants
+    
 class AllExpression(Expression):
     def __init__(self, variable, formula):
         self.variable: Expression = variable
@@ -311,6 +347,12 @@ class AllExpression(Expression):
         self.variable = self.variable.rename(var_count + 1, var_mapping)
         self.formula = self.formula.rename(var_count + 1, var_mapping)
         return self
+    
+    def get_quantifiers(self, all_quants):
+        all_quants.append(AllExpression(self.variable.copy(), None))
+        self.variable.get_quantifiers(all_quants)
+        self.formula.get_quantifiers(all_quants)
+        return all_quants
 
 class Tokens:
     class Token:
