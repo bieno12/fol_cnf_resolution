@@ -27,30 +27,40 @@ from resolution_procedure import Resolution
 # print("-----------------------------------------------------------")
 # print("-----------------------------------------------------------")
 # print()
-expr = AllExpression(VariableExpression("y"), ExistsExpression(VariableExpression("x"), NegationExpression(AndExpression(ImplicationExpression(VariableExpression("C"), VariableExpression("D")), PredicateExpression("father", [VariableExpression("A"), VariableExpression("B")])))))
-exprstr = "A & C -> B -> D"
-parser = LogicParser(str(exprstr))
-expr = parser.parse()
-print(expr.copy())
-resol = Resolution(expr)
-resol.implication_elimination()
+# expr = AllExpression(VariableExpression("y"), ExistsExpression(VariableExpression("x"), NegationExpression(AndExpression(ImplicationExpression(VariableExpression("C"), VariableExpression("D")), PredicateExpression("father", [VariableExpression("A"), VariableExpression("B")])))))
+# exprstr = "A & C -> B -> D"
+# parser = LogicParser(str(exprstr))
+# expr = parser.parse()
+# print(expr.copy())
+# resol = Resolution(expr)
+# resol.implication_elimination()
 
-print(resol.expression)
+# print(resol.expression)
 
 print("-----------------------------------------------------------")
 print("-----------------------------------------------------------")
 print("-----------------------------------------------------------")
 print()
 
-expr = parse_from_str('-(a | b) ')
-print(expr)
-print(expr.simplify())
-print()
-expr = parse_from_str('-(-a & b -> c) ')
-print(expr)
-# expr = Resolution.implication_elimination(expr)
+# expr = parse_from_str('-(a | b) ')
 # print(expr)
-# print(Resolution.apply_demorgans(expr))
+# print(expr.simplify())
+# print()
 
+# all y exists x -C -> D & father(A, B)
+# expr = parse_from_str('-(-a & b -> c) ')
+
+expr = parse_from_str('exists x -P(x) -> (all x exists y P(x, y))')
+print(expr)
+
+new_expr = Resolution(expr)
+
+new_expr.implication_elimination()
+print(new_expr)
+new_expr.apply_demorgans()
+print(new_expr)
+
+new_expr.standardize_variable_scope()
+print(new_expr)
 
 
