@@ -45,7 +45,9 @@ class Resolution:
     def apply_demorgans(self):
         self.expression = self.expression.copy().simplify()
 
-    def standardize_variable_scope(self, var_count=0, var_mapping={}):
+    def standardize_variable_scope(self):
+        var_count=0
+        var_mapping={}
         self.expression = self.expression.copy().rename(var_count, var_mapping)
     
     def prenex_normal_form(self):
@@ -63,7 +65,7 @@ class Resolution:
             var_to_constant = {}
             for quant in self.all_quantifiers:
                 if isinstance(quant, lg.ExistsExpression):
-                    var_to_constant[quant.variable.symbol] = chr(ord('A') + count)
+                    var_to_constant[quant.variable.symbol] = "f" + str(count) + "()"
                     count += 1
 
             return var_to_constant
