@@ -180,27 +180,28 @@ class Resolution:
         def get_next_name():
             count
             return f'var_{count}'
-        #get all quantifier vars in all clauses
-        names = []
-        def get_name(exp):
-            if isinstance(exp, lg.VariableExpression) and exp.type == lg.VariableExpression.QUANT_VARIABLE:
-                names.append(exp.symbol)
-            return exp
-        for clause in self.clauses:
-            for leaf in clause:
-                leaf.apply(get_name)
-        #map to new names
-        name_mapping = {}
-        for name in names:
-            name_mapping[name] = get_next_name()
-            count += 1
+
         def change_name(exp):
             if isinstance(exp, lg.VariableExpression):
                 if exp.symbol in name_mapping:
                     exp.symbol = name_mapping[exp.symbol]
             return exp
+        
+        def get_name(exp):
+            if isinstance(exp, lg.VariableExpression) and exp.type == lg.VariableExpression.QUANT_VARIABLE:
+                names.append(exp.symbol)
+            return exp
+        
         new_clauses = []
+
         for clause in self.clauses:
+            names = []
+            for leaf in clause:
+                leaf.apply(get_name)
+            name_mapping = {}
+            for name in names:
+                name_mapping[name] = get_next_name()
+                count += 1
             new_clause = []
             for leaf in clause:
                 new_clause.append(leaf.apply(change_name))
