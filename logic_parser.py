@@ -28,7 +28,7 @@ class Expression:
 class VariableExpression(Expression):
     CONSTANT = 'constant'
     QUANT_VARIABLE = 'quan_variable'
-    SKELOM = 'skelom'
+    SKOLEM = 'skolem'
     def __init__(self, symbol, type = 'constant'):
         self.symbol: str = symbol
         self.type = type
@@ -381,6 +381,8 @@ class ExistsExpression(Expression):
             expr.formula = expr.formula.apply(fn, order)
             return expr
     def copy(self):
+        if self.formula == None:
+            return ExistsExpression(self.variable.copy(), None)
         return ExistsExpression(self.variable.copy(), self.formula.copy())
     
     def children(self):
