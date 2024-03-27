@@ -19,10 +19,11 @@ class Resolution:
     def __str__(self):
         return str(self.expression)
 
-    def implication_elimination(self,):
+    def implication_elimination(self):
         self.expression = self.expression.copy().apply(eliminate_implication)
     
     def apply_demorgans(self):
         self.expression = self.expression.copy().simplify()
-    def standardize_variable_scope(self):
-         pass
+
+    def standardize_variable_scope(self, var_count=0, var_mapping={}):
+        self.expression = self.expression.copy().rename(var_count, var_mapping)

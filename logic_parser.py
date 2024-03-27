@@ -19,6 +19,8 @@ class Expression:
         pass
     def __str__(self) -> str:
         return self.str()
+    def rename(self, var_count, var_mapping):
+        return self
 
 class VariableExpression(Expression):
     def __init__(self, symbol):
@@ -31,6 +33,10 @@ class VariableExpression(Expression):
         return VariableExpression(self.symbol)
     def children(self):
         return []
+    def rename(self, var_count, var_mapping):
+        self.symbol = f'{var_mapping[self.symbol]}'
+        return self
+    
 
 class PredicateExpression(Expression):
     def __init__(self, symbol, var_nodes: list[VariableExpression]):
@@ -47,8 +53,13 @@ class PredicateExpression(Expression):
     def copy(self):
         var_nodes_cpy = [node.copy() for node in self.var_nodes]
         return PredicateExpression(self.symbol, var_nodes_cpy)
+    
     def children(self):
         return self.var_nodes
+    
+    def rename(self, var_count, var_mapping):
+        self.var_nodes = [node.rename(var_count, var_mapping) for node in self.var_nodes]
+        return self
 
 class AndExpression(Expression):
     def __init__(self, left_operand, right_operand):
@@ -71,10 +82,12 @@ class AndExpression(Expression):
             else:
              right_term =  f'({self.left.str(True)}) '
              return f'{left_term} & {right_term}'
+            
     def simplify(self):
         self.left = self.left.simplify()
         self.right = self.right.simplify()
         return self
+    
     def apply(self, fn):
         
         self.left = self.left.apply(fn)
@@ -86,6 +99,11 @@ class AndExpression(Expression):
         return AndExpression(self.left.copy(), self.right.copy())
     def children(self):
         return [self.left, self.right]
+    
+    def rename(self, var_count, var_mapping):
+        self.left = self.left.rename(var_count, var_mapping)
+        self.right = self.right.rename(var_count, var_mapping)
+        return self
 
 class OrExpression(Expression):
     def __init__(self, left_operand, right_operand):
@@ -125,6 +143,11 @@ class OrExpression(Expression):
     def children(self):
         return [self.left, self.right]
 
+    def rename(self, var_count, var_mapping):
+        self.left = self.left.rename(var_count, var_mapping)
+        self.right = self.right.rename(var_count, var_mapping)
+        return self
+    
 class ImplicationExpression(Expression):
     def __init__(self, left_operand, right_operand):
         self.left: Expression = left_operand
@@ -163,6 +186,11 @@ class ImplicationExpression(Expression):
     def children(self):
         return [self.left, self.right]
     
+    def rename(self, var_count, var_mapping):
+        self.left = self.left.rename(var_count, var_mapping)
+        self.right = self.right.rename(var_count, var_mapping)
+        return self
+    
 class EquivalenceExpression(Expression):
     def __init__(self, left_operand, right_operand):
         self.left: Expression = left_operand
@@ -187,6 +215,11 @@ class EquivalenceExpression(Expression):
     
     def children(self):
         return [self.left, self.right]
+    
+    def rename(self, var_count, var_mapping):
+        self.left = self.left.rename(var_count, var_mapping)
+        self.right = self.right.rename(var_count, var_mapping)
+        return self
 
 class NegationExpression(Expression):
     def __init__(self, operand):
@@ -204,14 +237,21 @@ class NegationExpression(Expression):
         if isinstance(self.operand, OrExpression):
             return AndExpression(NegationExpression(self.operand.left).simplify(), NegationExpression(self.operand.right).simplify())
         return self
+    
     def apply(self, fn):
         self.operand = self.operand.apply(fn)
         expr = fn(self)
         return expr
+    
     def copy(self):
         return NegationExpression(self.operand.copy())
+    
     def children(self):
         return [self.operand]
+    
+    def rename(self, var_count, var_mapping):
+        self.operand = self.operand.rename(var_count, var_mapping)
+        return self
     
 class ExistsExpression(Expression):
     def __init__(self, variable, formula):
@@ -236,8 +276,12 @@ class ExistsExpression(Expression):
     
     def children(self):
         return [self.variable, self.formula]
-    def rename(self):
-        pass
+    
+    def rename(self, var_count, var_mapping):
+        var_mapping[self.variable.symbol] = f'x{var_count + 1}'
+        self.variable = self.variable.rename(var_count + 1, var_mapping)
+        self.formula = self.formula.rename(var_count + 1, var_mapping)
+        return self
     
 class AllExpression(Expression):
     def __init__(self, variable, formula):
@@ -261,6 +305,12 @@ class AllExpression(Expression):
 
     def children(self):
         return [self.variable, self.formula]
+    
+    def rename(self, var_count, var_mapping):
+        var_mapping[self.variable.symbol] = f'x{var_count + 1}'
+        self.variable = self.variable.rename(var_count + 1, var_mapping)
+        self.formula = self.formula.rename(var_count + 1, var_mapping)
+        return self
 
 class Tokens:
     class Token:
