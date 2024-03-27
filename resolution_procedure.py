@@ -126,7 +126,6 @@ class Resolution:
     #2 - leafs of an Or
     
     def collect_clauses(self):
-        return [self.collect_leafs(self.expression)]
         clauses = []
         memo = set()
         def addtomemo(exp):
@@ -136,11 +135,11 @@ class Resolution:
         def find_orclause(expression):
             if expression in memo:
                 return expression
-            if isinstance(expression, lg.OrExpression):
+            if isinstance(expression, lg.OrExpression) or self.is_leaf(expression):
                 clauses.append(self.collect_leafs(expression))
-                print("found: ",expression)
                 expression.apply(addtomemo)
                 return expression
+            
             return expression
         self.expression.copy().apply(find_orclause, 'pre');
         return clauses
