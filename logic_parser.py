@@ -3,7 +3,7 @@ import re
 class Expression:
     def __init__(self, token):
         self.token = token
-    def __str__(self):
+    def str(self, reduced_brackets = False):
         return ""
     def simplify(self):
         return self
@@ -13,12 +13,13 @@ class Expression:
         pass
     def children(self):
         pass
-
+    def __str__(self) -> str:
+        return self.str()
 
 class VariableExpression(Expression):
     def __init__(self, symbol):
         self.symbol: str = symbol
-    def __str__(self):
+    def str(self):
         return self.symbol
     def apply(self, fn):
         return fn(self)
@@ -31,7 +32,7 @@ class PredicateExpression(Expression):
     def __init__(self, symbol, var_nodes: list[VariableExpression]):
         self.var_nodes = var_nodes
         self.symbol: str = symbol
-    def __str__(self):
+    def str(self, reduced_brackets = False):
         return f'{self.symbol}({", ".join(map(lambda x: x.symbol, self.var_nodes))})'
     def apply(self, fn):
         var_list = [node.apply(fn) for node in self.var_nodes]
@@ -51,9 +52,15 @@ class AndExpression(Expression):
         self.right: Expression = right_operand
         self.token = '&'
     
-    def __str__(self):
-
-        return f'({self.left}) & ({self.right})'
+    def str(self, reduced_brackets = False):
+        if not reduced_brackets:
+            return f'({self.left}) & ({self.right})'
+        else:
+            result = ''
+            if Tokens.has_priority(self.left.token, Tokens.AND):
+             result = result + f'{self.left.str(True)} '
+            else:
+             result = result + f'{self.left.str(True)} '
     
     def simplify(self):
         self.left = self.left.simplify()
@@ -77,7 +84,7 @@ class OrExpression(Expression):
         self.right: Expression = right_operand
         self.token: str = '|'
     
-    def __str__(self):
+    def str(self):
         return f'({self.left}) | ({self.right})'
     
     def simplify(self):
@@ -103,7 +110,7 @@ class ImplicationExpression(Expression):
         self.right: Expression = right_operand
         self.token: str = '->'
 
-    def __str__(self):
+    def str(self):
         return f'({self.left}) -> ({self.right})'
 
     def simplify(self):
@@ -128,7 +135,7 @@ class EquivalenceExpression(Expression):
         self.right: Expression = right_operand
         self.token: str = '<->'
 
-    def __str__(self):
+    def str(self):
         return f'({self.left}) <-> ({self.right})'
 
     def simplify(self):
@@ -152,7 +159,7 @@ class NegationExpression(Expression):
         self.operand: Expression = operand
         self.token: str = '-'
     
-    def __str__(self):
+    def str(self):
         return f'-({self.operand})'
     
     def simplify(self):
@@ -178,7 +185,7 @@ class ExistsExpression(Expression):
         self.formula: Expression = formula
         self.token: str = 'exists'
     
-    def __str__(self):
+    def str(self):
         return f'exists {self.variable} ({self.formula})'
     
     def simplify(self):
@@ -196,7 +203,7 @@ class ExistsExpression(Expression):
     def children(self):
         return [self.variable, self.formula]
     def rename(self):
-        
+        pass
     
 class AllExpression(Expression):
     def __init__(self, variable, formula):
@@ -204,7 +211,7 @@ class AllExpression(Expression):
         self.formula: Expression = formula
         self.token: str = 'all'
 
-    def __str__(self):
+    def str(self):
         return f'all {self.variable} ({self.formula})'
 
     def simplify(self):

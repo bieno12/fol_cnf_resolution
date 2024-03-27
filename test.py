@@ -32,7 +32,10 @@ exprstr = "A & C -> B -> D"
 parser = LogicParser(str(exprstr))
 expr = parser.parse()
 print(expr.copy())
-print(Resolution.implication_elimination(expr))
+resol = Resolution(expr)
+resol.implication_elimination()
+
+print(resol.expression)
 
 print("-----------------------------------------------------------")
 print("-----------------------------------------------------------")
@@ -45,9 +48,9 @@ print(expr.simplify())
 print()
 expr = parse_from_str('-(-a & b -> c) ')
 print(expr)
-expr = Resolution.implication_elimination(expr)
-print(expr)
-print(Resolution.apply_demorgans(expr))
+# expr = Resolution.implication_elimination(expr)
+# print(expr)
+# print(Resolution.apply_demorgans(expr))
 
 
 
