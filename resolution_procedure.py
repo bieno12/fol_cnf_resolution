@@ -110,29 +110,15 @@ class Resolution:
         def addtomemo(exp):
             memo.add(exp)
             return exp
-        
-        def find_negated_leaf(exp):
-            if exp in memo:
-                return exp
-            if isinstance(exp, lg.NegationExpression):
-                leafs.append(exp)
-                exp.apply(addtomemo)
-            return exp
-        def find_pred_leaf(exp):
-            if exp in memo:
-                return exp
-            if isinstance(exp, lg.PredicateExpression):
-                leafs.append(exp)
-                exp.apply(addtomemo)
-            return exp
         def find_leaf(exp):
             if exp in memo:
                 return exp
             if self.is_leaf(exp):
                 leafs.append(exp)
                 exp.apply(addtomemo)
+
             return exp
-        expression.copy().apply(find_negated_leaf).apply(find_pred_leaf).apply(find_leaf)
+        expression.copy().apply(find_leaf, 'pre')
         return leafs
 
     #what is a clause
@@ -140,6 +126,7 @@ class Resolution:
     #2 - leafs of an Or
     
     def collect_clauses(self):
+        return [self.collect_leafs(self.expression)]
         clauses = []
         memo = set()
         def addtomemo(exp):
