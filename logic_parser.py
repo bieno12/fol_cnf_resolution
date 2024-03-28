@@ -32,20 +32,19 @@ class VariableExpression(Expression):
     CONSTANT = 'constant'
     QUANT_VARIABLE = 'quan_variable'
     SKOLEM = 'skolem'
-    def __init__(self, symbol, type = 'constant'):
+    def __init__(self, symbol, type = 'constant', skolem_vars = None):
         self.symbol: str = symbol
         self.type = type
         self.token = Tokens.IDENTIFIER
-        self.skolem_vars = None
+        self.skolem_vars = skolem_vars
     def str(self, reduced_brackets= False):
         if self.type == VariableExpression.SKOLEM:
-            print(self.skolem_vars)
             return f'{self.symbol}({", ".join(self.skolem_vars)})'
         return self.symbol
     def apply(self, fn, order='post'):
         return fn(self)
     def copy(self):
-        return VariableExpression(self.symbol, self.type)
+        return VariableExpression(self.symbol, self.type, self.skolem_vars)
     def children(self):
         return []
     def rename(self, var_count, var_mapping):

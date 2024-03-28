@@ -191,6 +191,13 @@ class Resolution:
 
         def change_name(exp):
             if isinstance(exp, lg.VariableExpression):
+                if exp.type == lg.VariableExpression.SKOLEM:
+                    new_vars = []
+                    for var in exp.skolem_vars:
+                        if var in name_mapping:
+                            new_vars.append(name_mapping[var])
+                    exp.skolem_vars = new_vars
+                    return exp
                 if exp.symbol in name_mapping:
                     exp.symbol = name_mapping[exp.symbol]
             return exp
