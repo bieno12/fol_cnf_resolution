@@ -36,7 +36,11 @@ class VariableExpression(Expression):
         self.symbol: str = symbol
         self.type = type
         self.token = Tokens.IDENTIFIER
+        self.skolem_vars = None
     def str(self, reduced_brackets= False):
+        if self.type == VariableExpression.SKOLEM:
+            print(self.skolem_vars)
+            return f'{self.symbol}({", ".join(self.skolem_vars)})'
         return self.symbol
     def apply(self, fn, order='post'):
         return fn(self)
@@ -57,7 +61,7 @@ class PredicateExpression(Expression):
         self.symbol: str = symbol
         self.token = Tokens.IDENTIFIER
     def str(self, reduced_brackets = False):
-        return f'{self.symbol}({", ".join(map(lambda x: x.symbol, self.var_nodes))})'
+        return f'{self.symbol}({", ".join(map(lambda x: x.str(reduced_brackets), self.var_nodes))})'
     def apply(self, fn, order='post'):
         if order == 'post':
             var_list = [node.apply(fn) for node in self.var_nodes]

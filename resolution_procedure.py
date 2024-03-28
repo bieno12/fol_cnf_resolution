@@ -101,12 +101,17 @@ class Resolution:
         return self
     
     def skolemize(self):
+        vars_of_alls = []
+        for quant in self.all_quantifiers:
+            if isinstance(quant, lg.AllExpression):
+                vars_of_alls.append(quant.variable.symbol)
         def get_new_names():
             count: int = 0
             var_to_constant = {}
+
             for quant in self.all_quantifiers:
                 if isinstance(quant, lg.ExistsExpression):
-                    var_to_constant[quant.variable.symbol] = "f" + str(count) + "()"
+                    var_to_constant[quant.variable.symbol] = "f" + str(count)
                     count += 1
 
             return var_to_constant
@@ -118,8 +123,8 @@ class Resolution:
                 if expression.symbol in existential_var_to_constant:
                     expression.symbol = existential_var_to_constant[expression.symbol]
                     expression.type = lg.VariableExpression.SKOLEM
+                    expression.skolem_vars = list(vars_of_alls)
             return expression
-        
         self.expression = self.expression.copy().apply(rename_variable_names).apply(remove_quantifiers)
         return self
 
