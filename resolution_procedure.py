@@ -39,32 +39,36 @@ class Resolution:
         return str(self.expression)
 
     def apply_all_steps(self, verbose = False):
+        def myprint(string):
+            if not verbose: return;
+            print(string)
+        
         self = self.implication_elimination() 
-        print("after implication elimination :-")
-        print(self)
+        myprint("after implication elimination :-")
+        myprint(self)
         self = self.apply_demorgans() 
-        print("after apply_demorgans :-")
-        print(self)
+        myprint("after apply_demorgans :-")
+        myprint(self)
         self = self.standardize_variable_scope() 
-        print("after standardize_variable_scope :-")
-        print(self)
+        myprint("after standardize_variable_scope :-")
+        myprint(self)
         self = self.prenex_normal_form() 
-        print("after prenex_normal_form :-")
-        print(self)
+        myprint("after prenex_normal_form :-")
+        myprint(self)
         self = self.skolemize() 
-        print("after skolemize :-")
-        print(self)
+        myprint("after skolemize :-")
+        myprint(self)
         self = self.conjunctive_form() 
-        print("after conjunctive_form :-")
-        print(self)
+        myprint("after conjunctive_form :-")
+        myprint(self)
         self = self.compute_clauses() 
-        print("after compute_clauses :-")
+        myprint("after compute_clauses :-")
         for clause in self.clauses:
-            print('{ ', ", ".join([str(x) for x in clause]),' }')
+            myprint('{ ' + ", ".join([str(x) for x in clause]) + ' }')
         self = self.standardize_clauses() 
-        print("after standardize_clauses :-")
+        myprint("after standardize_clauses :-")
         for clause in self.clauses:
-            print('{ ', ", ".join([str(x) for x in clause]),' }')
+            myprint('{ ' + ", ".join([str(x) for x in clause]) + ' }')
 
         return self
     

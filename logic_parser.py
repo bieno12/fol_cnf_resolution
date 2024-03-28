@@ -1,8 +1,7 @@
 import re
 
 
-def bracket(str):
-    return f'({str})'
+
 
 class Expression:
     def __init__(self, token):
@@ -23,6 +22,12 @@ class Expression:
         return self
     def conjunctive_form(self):
         return self
+    def bracket(self, term):
+        if Tokens.has_priority(self.token, term.token):
+            return f'({term.str(True)})'
+        return f'{term.str(True)}'
+
+
 class VariableExpression(Expression):
     CONSTANT = 'constant'
     QUANT_VARIABLE = 'quan_variable'
@@ -30,7 +35,8 @@ class VariableExpression(Expression):
     def __init__(self, symbol, type = 'constant'):
         self.symbol: str = symbol
         self.type = type
-    def str(self):
+        self.token = Tokens.IDENTIFIER
+    def str(self, reduced_brackets= False):
         return self.symbol
     def apply(self, fn, order='post'):
         return fn(self)
@@ -49,6 +55,7 @@ class PredicateExpression(Expression):
     def __init__(self, symbol, var_nodes: list[VariableExpression]):
         self.var_nodes = var_nodes
         self.symbol: str = symbol
+        self.token = Tokens.IDENTIFIER
     def str(self, reduced_brackets = False):
         return f'{self.symbol}({", ".join(map(lambda x: x.symbol, self.var_nodes))})'
     def apply(self, fn, order='post'):
@@ -80,22 +87,10 @@ class AndExpression(Expression):
         self.token = '&'
     
     def str(self, reduced_brackets = False):
-        return f'({self.left}) & ({self.right})'
-
         if not reduced_brackets:
-            return f'({self.left}) & ({self.right})'
+            return f'({self.left.str(reduced_brackets)}) & ({self.right.str(reduced_brackets)})'
         else:
-            left_term = ''
-            if Tokens.has_priority(self.left.token.type, Tokens.AND):
-             left_term =  self.left.str(True)
-            else:
-             left_term =  f'({self.left.str(True)})'
-            right_term = ''
-            if Tokens.has_priority(self.left.token.type, Tokens.AND):
-             right_term =  self.left.str(True)
-            else:
-             right_term =  f'({self.left.str(True)}) '
-             return f'{left_term} & {right_term}'
+             return f'{self.bracket(self.left)} & {self.bracket(self.right)}'
             
     def simplify(self):
         self.left = self.left.simplify()
@@ -136,19 +131,9 @@ class OrExpression(Expression):
     
     def str(self, reduced_brackets = False):
         if not reduced_brackets:
-            return f'({self.left}) | ({self.right})'
+            return f'({self.left.str(reduced_brackets)}) | ({self.right.str(reduced_brackets)})'
         else:
-            left_term = ''
-            if Tokens.has_priority(self.left.token.type, Tokens.AND):
-             left_term =  self.left.str(True)
-            else:
-             left_term =  f'({self.left.str(True)})'
-            right_term = ''
-            if Tokens.has_priority(self.left.token.type, Tokens.AND):
-             right_term =  self.left.str(True)
-            else:
-             right_term =  f'({self.left.str(True)}) '
-             return f'{left_term} | {right_term}'
+             return f'{self.bracket(self.left)} | {self.bracket(self.right)}'
     def simplify(self):
         self.left = self.left.simplify()
         self.right = self.right.simplify()
@@ -200,19 +185,9 @@ class ImplicationExpression(Expression):
 
     def str(self, reduced_brackets = False):
         if not reduced_brackets:
-            return f'({self.left}) -> ({self.right})'
+            return f'({self.left.str(reduced_brackets)}) -> ({self.right.str(reduced_brackets)})'
         else:
-            left_term = ''
-            if Tokens.has_priority(self.left.token.type, Tokens.AND):
-             left_term =  self.left.str(True)
-            else:
-             left_term =  f'({self.left.str(True)})'
-            right_term = ''
-            if Tokens.has_priority(self.left.token.type, Tokens.AND):
-             right_term =  self.left.str(True)
-            else:
-             right_term =  f'({self.left.str(True)}) '
-             return f'{left_term} -> {right_term}'
+             return f'{self.bracket(self.left)} -> {self.bracket(self.right)}'
 
     def simplify(self):
         self.left = self.left.simplify()
@@ -252,8 +227,11 @@ class EquivalenceExpression(Expression):
         self.right: Expression = right_operand
         self.token: str = '<->'
 
-    def str(self):
-        return f'({self.left}) <-> ({self.right})'
+    def str(self, reduced_brackets = False):
+        if not reduced_brackets:
+            return f'({self.left}) <-> ({self.right})'
+        else:
+             return f'{self.bracket(self.left)} <-> {self.bracket(self.right)}'
 
     def simplify(self):
         self.left = self.left.simplify()
@@ -292,8 +270,11 @@ class NegationExpression(Expression):
         self.operand: Expression = operand
         self.token: str = '-'
     
-    def str(self):
-        return f'-({self.operand})'
+    def str(self, reduced_brackets= False):
+        if not reduced_brackets:
+            return f'-({self.operand.str(reduced_brackets)})'
+        else:
+             return f'-{self.bracket(self.operand)}'
     
     def simplify(self):
         if isinstance(self.operand, NegationExpression):
@@ -341,8 +322,8 @@ class ExistsExpression(Expression):
             self.formula = None
         self.token: str = 'exists'
     
-    def str(self):
-        return f'exists {self.variable} ({self.formula})'
+    def str(self, reduced_brackets = False):
+        return f'exists {self.variable} ({self.formula.str(reduced_brackets)})'
     
     def simplify(self):
         self.formula = self.formula.simplify()
@@ -390,8 +371,8 @@ class AllExpression(Expression):
             self.formula = None
         self.token: str = 'all'
 
-    def str(self):
-        return f'all {self.variable} ({self.formula})'
+    def str(self, reduced_brackets = False):
+        return f'all {self.variable} ({self.formula.str(reduced_brackets)})'
 
     def simplify(self):
         self.formula = self.formula.simplify()
@@ -453,6 +434,7 @@ class Tokens:
     SYMBOLS = [x for x in TOKENS if re.match(r"^[-\\.(),!&^|>=<]*$", x)]
 
     operator_precedence = [
+            [IDENTIFIER],
             [NOT],
             QUANTS,
             [AND],
@@ -460,14 +442,12 @@ class Tokens:
             [IMP],
             [IFF],
         ]
-    def get_priority(self, type: str):
-        for i,l in enumerate(self.operator_precedence):
-            if type in l: return i
+    def get_priority(token_type: str):
+        for i,l in enumerate(Tokens.operator_precedence):
+            if token_type in l: return i
         return 999
-    def has_priority(self, tok: str, another):
-        if another == None:
-            return True
-        return self.get_priority(tok) < self.get_priority(another)
+    def has_priority( tok: str, another):
+        return Tokens.get_priority(tok) < Tokens.get_priority(another)
     
 def parse_from_str(string: str):
     parser = LogicParser(string)

@@ -58,9 +58,10 @@ new_expr = new_expr.apply_all_steps(True)
 
 print('--------------------------------------------------------------------------------\n\n')
 
-# expr = parse_from_str("a & b | c ")
-# r = Resolution(expr).apply_all_steps()
-# print(expr)
+expr = parse_from_str("-a & (b | c) | e ")
+r = Resolution(expr).apply_all_steps()
+print(expr.str(True))
+print(expr.str(False))
 # print("after steps: ", r)
 # print("clauses = ", [[str(y) for y in x] for x in r.clauses])
 
