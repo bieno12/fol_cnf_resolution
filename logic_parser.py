@@ -286,6 +286,10 @@ class NegationExpression(Expression):
             return OrExpression(NegationExpression(self.operand.left).simplify(), NegationExpression(self.operand.right).simplify())
         if isinstance(self.operand, OrExpression):
             return AndExpression(NegationExpression(self.operand.left).simplify(), NegationExpression(self.operand.right).simplify())
+        if isinstance(self.operand, AllExpression):
+            return ExistsExpression(self.operand.variable, NegationExpression(self.operand.formula)).simplify()
+        if isinstance(self.operand, ExistsExpression):
+            return AllExpression(self.operand.variable, NegationExpression(self.operand.formula)).simplify()
         return self
     
     def apply(self, fn, order = 'post'):
