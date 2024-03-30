@@ -127,7 +127,7 @@ class Resolution:
             return expression
         self.expression = self.expression.copy().apply(rename_variable_names).apply(remove_quantifiers)
         return self
-
+    #TODO: Redo the conjunctive form using the apply function to reduce redundunt code
     def conjunctive_form(self):
         self.expression = self.expression.conjunctive_form()
         return self

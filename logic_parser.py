@@ -411,7 +411,11 @@ class AllExpression(Expression):
         self.formula = self.formula.conjunctive_form()
         return self
 
+
+
 class Tokens:
+    #TODO: add parsing for other tokens of same type
+    
     class Token:
         def __init__(self, type, value = None) -> None:
             self.type = type
@@ -421,7 +425,9 @@ class Tokens:
                 return f'{self.type}({self.value})'
             return self.type
     IDENTIFIER = "Identifier"
+
     EXISTS = "exists"
+    aLL_EXISTS_QUANT = ["exists", ]
     ALL = "all"
     OPEN = "("
     CLOSE = ")"
