@@ -1,4 +1,7 @@
+# back up before 12AM
 import logic_parser as lg
+from graphviz import Digraph
+
 """
     Resolution object takes an expr
     fn1: applies implication elimination to the expression
@@ -45,26 +48,26 @@ class Resolution:
         myprint("after implication elimination :-")
         myprint(self)
         self = self.apply_demorgans() 
-        myprint("after apply_demorgans :-")
+        myprint("\nafter apply_demorgans :-")
         myprint(self)
         self = self.standardize_variable_scope() 
-        myprint("after standardize_variable_scope :-")
+        myprint("\nafter standardize_variable_scope :-")
         myprint(self)
         self = self.prenex_normal_form() 
-        myprint("after prenex_normal_form :-")
+        myprint("\nafter prenex_normal_form :-")
         myprint(self)
         self = self.skolemize() 
-        myprint("after skolemize :-")
+        myprint("\nafter skolemize :-")
         myprint(self)
         self = self.conjunctive_form() 
-        myprint("after conjunctive_form :-")
+        myprint("\nafter conjunctive_form :-")
         myprint(self)
         self = self.compute_clauses() 
-        myprint("after compute_clauses :-")
+        myprint("\nafter compute_clauses :-")
         for clause in self.clauses:
             myprint('{ ' + ", ".join([str(x) for x in clause]) + ' }')
         self = self.standardize_clauses() 
-        myprint("after standardize_clauses :-")
+        myprint("\nafter standardize_clauses :-")
         for clause in self.clauses:
             myprint('{ ' + ", ".join([str(x) for x in clause]) + ' }')
 
@@ -73,6 +76,7 @@ class Resolution:
     def implication_elimination(self):
         self.expression = self.expression.copy().apply(eliminate_implication)
         return self
+    
     def apply_demorgans(self):
         self.expression = self.expression.copy().simplify()
         return self
@@ -247,4 +251,40 @@ class Resolution:
             new_clauses.append(new_clause)
         self.clauses = new_clauses
         return self
+    
+    def visualize_tree(self, root):
+        dot = Digraph()
+
+        def add_edge(parent, to_connect, edge_label=""):
+            if to_connect is not None:
+                dot.edge(str(id(parent)), str(id(to_connect)), label=edge_label)
+
+        def add_node(node):
+            if node is None:
+                return
+
+
+            node_content: str = ""
+            if isinstance(node, lg.VariableExpression):
+                node_content = str(node.symbol)
+            elif isinstance(node, lg.PredicateExpression):
+                node_content = f'Predicate: {node.symbol}'
+            else:
+                node_content = str(node.token)
+
+            dot.node(str(id(node)), label=node_content)
+            if isinstance(node, lg.AllExpression) or isinstance(node, lg.ExistsExpression):
+                add_node(node.variable)
+                add_edge(node, node.variable)
+                
+                add_node(node.formula)
+                add_edge(node.variable, node.formula)
+                return
+
+            for n in node.children():
+                add_node(n)
+                add_edge(node, n)
+                
+        add_node(root)
+        return dot
         

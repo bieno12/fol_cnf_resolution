@@ -78,7 +78,7 @@ print()
 # print("after steps: ", r)
 # print("clauses = ", [[str(y) for y in x] for x in r.clauses])
 
-expr = parse_from_str('exists x -P(x) -> (all x exists y P(x, y) & Q(x, y))')
+expr = parse_from_str('exists x -P(x) -> (exists y all z P(x, y, z, x) & -Q(x, y))')
 print(expr)
 
 new_expr = Resolution(expr)
@@ -90,3 +90,11 @@ expr = parse_from_str("a & (b | c & d) | e ")
 r = Resolution(expr).conjunctive_form()
 print("expr: ", r.expression.str(True))
 
+
+expr = parse_from_str("exists x -P(x) -> (exists y all z P(x, y, z, x) & -Q(x, y))")
+r = Resolution(expr).apply_all_steps()
+print(expr.str(True))
+print(expr.str(False))
+
+dot = Resolution(expr).visualize_tree(expr)
+dot.render(outfile='tree.png')

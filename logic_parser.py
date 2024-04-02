@@ -427,7 +427,6 @@ def parse_from_str(string: str):
     parser = LogicParser(string)
     return parser.parse()
 class LogicParser:
-
     def __init__(self, expression: str) -> None:
         self.expression = expression
 
@@ -536,16 +535,18 @@ class LogicParser:
                 variables_list.append(self.parse_variable(VariableExpression.CONSTANT))
         except:
             pass
-        #parse closing bracket
+        # parse closing bracket
         self.consume_token(Tokens.CLOSE)
         return PredicateExpression(perdicate_name, variables_list)
 
     def parse_variable(self, type):
         tok = self.consume_token(Tokens.IDENTIFIER)
         return VariableExpression(tok.value, type)
+    
     def parse_negation(self):
         t = self.consume_token(Tokens.NOT)
         return NegationExpression(self.parse_expression(t))
+    
     def handle_quantifier(self):
         if self.token(0).type == Tokens.ALL:
             return self.parse_all_exp()
@@ -559,10 +560,12 @@ class LogicParser:
         variable = self.parse_variable(VariableExpression.QUANT_VARIABLE)
         formula = self.parse_expression()
         return AllExpression(variable, formula)
+    
     def parse_exists_exp(self):
         t = self.consume_token(Tokens.EXISTS)
         variable = self.parse_variable(VariableExpression.QUANT_VARIABLE)
         formula = self.parse_expression()
+
         return ExistsExpression(variable, formula)
     def handle_open(self):
         self.consume_token(Tokens.OPEN)
@@ -588,6 +591,7 @@ class LogicParser:
             return AndExpression(expression, self.parse_expression(self.token()))
         else:
             return expression
+        
     def attempt_OrExpression(self, expression: Expression, context: Tokens.Token):
         if not self.in_range(0) or not self.has_priority(Tokens.OR, context): 
             return expression
@@ -603,6 +607,7 @@ class LogicParser:
             return ImplicationExpression(expression, self.parse_expression(self.token()))
         else:
             return expression
+        
     def attempt_EquivExpression(self, expression: Expression, context: Tokens.Token):
         if not self.in_range(0) or not self.has_priority(Tokens.IFF, context): 
             return expression
