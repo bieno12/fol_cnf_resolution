@@ -50,7 +50,7 @@ print()
 # all y exists x -C -> D & father(A, B)
 # expr = parse_from_str('-(-a & b -> c) ')
 
-expr = parse_from_str('exists x -P(x) -> (all x exists y P(x, y) & Q(x, y))')
+expr = parse_from_str('exists x -P(x) -> (exists y all z P(x, y, z, x) & -Q(x, y))')
 print(expr)
 
 new_expr = Resolution(expr)
@@ -58,10 +58,14 @@ new_expr = new_expr.apply_all_steps(True)
 
 print('--------------------------------------------------------------------------------\n\n')
 
-expr = parse_from_str("-a & (b | c) | e ")
+expr = parse_from_str("exists x -P(x) -> (exists y all z P(x, y, z, x) & -Q(x, y))")
 r = Resolution(expr).apply_all_steps()
 print(expr.str(True))
 print(expr.str(False))
+
+dot = Resolution(expr).visualize_tree(expr)
+dot.render(outfile='tree.png')
+
 # print("after steps: ", r)
 # print("clauses = ", [[str(y) for y in x] for x in r.clauses])
 
