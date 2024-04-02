@@ -32,8 +32,6 @@ def remove_quantifiers(expression):
     return expression
 
 
-
-
 class Resolution:
     def __init__(self, expr: lg.Expression):
         self.expression = expr.copy()
@@ -83,6 +81,7 @@ class Resolution:
         self.expression = self.expression.copy().simplify()
         return self
     
+    #TODO: Do the renaming in a better way.
     def standardize_variable_scope(self):
         var_count=0
         var_mapping={}
@@ -106,12 +105,17 @@ class Resolution:
         return self
     
     def skolemize(self):
+        vars_of_alls = []
+        for quant in self.all_quantifiers:
+            if isinstance(quant, lg.AllExpression):
+                vars_of_alls.append(quant.variable.symbol)
         def get_new_names():
             count: int = 0
             var_to_constant = {}
+
             for quant in self.all_quantifiers:
                 if isinstance(quant, lg.ExistsExpression):
-                    var_to_constant[quant.variable.symbol] = "f" + str(count) + "()"
+                    var_to_constant[quant.variable.symbol] = "f" + str(count)
                     count += 1
 
             return var_to_constant
@@ -123,13 +127,37 @@ class Resolution:
                 if expression.symbol in existential_var_to_constant:
                     expression.symbol = existential_var_to_constant[expression.symbol]
                     expression.type = lg.VariableExpression.SKOLEM
+                    expression.skolem_vars = list(vars_of_alls)
             return expression
-        
         self.expression = self.expression.copy().apply(rename_variable_names).apply(remove_quantifiers)
         return self
-
+    #TODO: Redo the conjunctive form using the apply function to reduce redundunt code
+    
     def conjunctive_form(self):
-        self.expression = self.expression.conjunctive_form()
+        still_simplifable = True
+        def do_conjuntive(expr):
+            nonlocal still_simplifable
+            if isinstance(expr, lg.OrExpression):
+                if isinstance(expr.left, lg.AndExpression):
+                    still_simplifable = True
+                    andexp = expr.left
+                    otherfactor = expr.right
+                    left = lg.OrExpression(andexp.left,otherfactor)
+                    right = lg.OrExpression(andexp.right,otherfactor)
+                    expr =  lg.AndExpression(left, right)
+                if isinstance(expr.right, lg.AndExpression):
+                    still_simplifable = True
+                    andexp = expr.right
+                    otherfactor = expr.left
+                    left = lg.OrExpression(otherfactor, andexp.left)
+                    right = lg.OrExpression(otherfactor, andexp.right)
+                    expr = lg.AndExpression(left, right)
+            return expr
+        
+        while still_simplifable:
+            still_simplifable = False
+            self.expression = self.expression.apply(do_conjuntive, 'pre')
+
         return self
 
     #what is a leaf
@@ -191,6 +219,13 @@ class Resolution:
 
         def change_name(exp):
             if isinstance(exp, lg.VariableExpression):
+                if exp.type == lg.VariableExpression.SKOLEM:
+                    new_vars = []
+                    for var in exp.skolem_vars:
+                        if var in name_mapping:
+                            new_vars.append(name_mapping[var])
+                    exp.skolem_vars = new_vars
+                    return exp
                 if exp.symbol in name_mapping:
                     exp.symbol = name_mapping[exp.symbol]
             return exp

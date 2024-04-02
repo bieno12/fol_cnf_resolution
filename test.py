@@ -94,3 +94,16 @@ dot.render(outfile='tree.png')
 # print(expr)
 # print("after steps: ", r)
 # print("clauses = ", [[str(y) for y in x] for x in r.clauses])
+
+expr = parse_from_str('exists x -P(x) -> (all x exists y P(x, y) & Q(x, y))')
+print(expr)
+
+new_expr = Resolution(expr)
+new_expr = new_expr.apply_all_steps(True)
+
+print('--------------------------------------------------------------------------------\n\n')
+
+expr = parse_from_str("a & (b | c & d) | e ")
+r = Resolution(expr).conjunctive_form()
+print("expr: ", r.expression.str(True))
+

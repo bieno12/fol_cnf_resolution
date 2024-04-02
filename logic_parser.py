@@ -2,7 +2,7 @@ import re
 
 
 
-
+#TODO: Implement a compare function
 class Expression:
     def __init__(self, token):
         self.token = token
@@ -20,28 +20,30 @@ class Expression:
         return self.str()
     def rename(self, var_count, var_mapping):
         return self
-    def conjunctive_form(self):
-        return self
     def bracket(self, term):
         if Tokens.has_priority(self.token, term.token):
             return f'({term.str(True)})'
         return f'{term.str(True)}'
 
 
+#Create new Types of VariableExpressions: constant and skelom 
 class VariableExpression(Expression):
     CONSTANT = 'constant'
     QUANT_VARIABLE = 'quan_variable'
     SKOLEM = 'skolem'
-    def __init__(self, symbol, type = 'constant'):
+    def __init__(self, symbol, type = 'constant', skolem_vars = None):
         self.symbol: str = symbol
         self.type = type
         self.token = Tokens.IDENTIFIER
+        self.skolem_vars = skolem_vars
     def str(self, reduced_brackets= False):
+        if self.type == VariableExpression.SKOLEM:
+            return f'{self.symbol}({", ".join(self.skolem_vars)})'
         return self.symbol
     def apply(self, fn, order='post'):
         return fn(self)
     def copy(self):
-        return VariableExpression(self.symbol, self.type)
+        return VariableExpression(self.symbol, self.type, self.skolem_vars)
     def children(self):
         return []
     def rename(self, var_count, var_mapping):
@@ -57,7 +59,7 @@ class PredicateExpression(Expression):
         self.symbol: str = symbol
         self.token = Tokens.IDENTIFIER
     def str(self, reduced_brackets = False):
-        return f'{self.symbol}({", ".join(map(lambda x: x.symbol, self.var_nodes))})'
+        return f'{self.symbol}({", ".join(map(lambda x: x.str(reduced_brackets), self.var_nodes))})'
     def apply(self, fn, order='post'):
         if order == 'post':
             var_list = [node.apply(fn) for node in self.var_nodes]
@@ -117,11 +119,7 @@ class AndExpression(Expression):
         self.left = self.left.rename(var_count, var_mapping)
         self.right = self.right.rename(var_count, var_mapping)
         return self
-    
-    def conjunctive_form(self):
-        self.left = self.left.conjunctive_form()
-        self.right = self.right.conjunctive_form()
-        return self
+
     
 class OrExpression(Expression):
     def __init__(self, left_operand, right_operand):
@@ -160,21 +158,6 @@ class OrExpression(Expression):
     def rename(self, var_count, var_mapping):
         self.left = self.left.rename(var_count, var_mapping)
         self.right = self.right.rename(var_count, var_mapping)
-        return self
-    
-    def conjunctive_form(self):
-        if isinstance(self.left, AndExpression):
-            andexpr = self.left
-            new_left = OrExpression(andexpr.left, self.right)
-            new_right = OrExpression(andexpr.right, self.right)
-            return AndExpression(new_left, new_right).conjunctive_form()
-        if isinstance(self.right, AndExpression):
-            andexpr = self.right
-            new_left = OrExpression(self.left, andexpr.left)
-            new_right = OrExpression(self.left, andexpr.right)
-            return AndExpression(new_left, new_right).conjunctive_form()
-        self.left = self.left.conjunctive_form()
-        self.right = self.right.conjunctive_form()
         return self
     
 class ImplicationExpression(Expression):
@@ -216,11 +199,6 @@ class ImplicationExpression(Expression):
         self.right = self.right.rename(var_count, var_mapping)
         return self
     
-    def conjunctive_form(self):
-        self.left = self.left.conjunctive_form()
-        self.right = self.right.conjunctive_form()
-        return self
-    
 class EquivalenceExpression(Expression):
     def __init__(self, left_operand, right_operand):
         self.left: Expression = left_operand
@@ -259,11 +237,7 @@ class EquivalenceExpression(Expression):
         self.left = self.left.rename(var_count, var_mapping)
         self.right = self.right.rename(var_count, var_mapping)
         return self
-    
-    def conjunctive_form(self):
-        self.left = self.left.conjunctive_form()
-        self.right = self.right.conjunctive_form()
-        return self
+
     
 class NegationExpression(Expression):
     def __init__(self, operand):
@@ -283,6 +257,10 @@ class NegationExpression(Expression):
             return OrExpression(NegationExpression(self.operand.left).simplify(), NegationExpression(self.operand.right).simplify())
         if isinstance(self.operand, OrExpression):
             return AndExpression(NegationExpression(self.operand.left).simplify(), NegationExpression(self.operand.right).simplify())
+        if isinstance(self.operand, AllExpression):
+            return ExistsExpression(self.operand.variable, NegationExpression(self.operand.formula)).simplify()
+        if isinstance(self.operand, ExistsExpression):
+            return AllExpression(self.operand.variable, NegationExpression(self.operand.formula)).simplify()
         return self
     
     def apply(self, fn, order = 'post'):
@@ -304,9 +282,7 @@ class NegationExpression(Expression):
         self.operand = self.operand.rename(var_count, var_mapping)
         return self
     
-    def conjunctive_form(self):
-        self.operand = self.operand.conjunctive_form()
-        return self
+
     
 class ExistsExpression(Expression):
     def __init__(self, variable, formula):
@@ -353,9 +329,7 @@ class ExistsExpression(Expression):
         self.formula = self.formula.rename(var_count + 1, var_mapping)
         return self
     
-    def conjunctive_form(self):
-        self.formula = self.formula.conjunctive_form()
-        return self
+
 
 class AllExpression(Expression):
     def __init__(self, variable, formula):
@@ -400,11 +374,9 @@ class AllExpression(Expression):
         self.formula = self.formula.rename(var_count + 1, var_mapping)
         return self
 
-    def conjunctive_form(self):
-        self.formula = self.formula.conjunctive_form()
-        return self
-
 class Tokens:
+    #TODO: add parsing for other tokens of same type
+
     class Token:
         def __init__(self, type, value = None) -> None:
             self.type = type
@@ -414,7 +386,9 @@ class Tokens:
                 return f'{self.type}({self.value})'
             return self.type
     IDENTIFIER = "Identifier"
+
     EXISTS = "exists"
+    aLL_EXISTS_QUANT = ["exists", ]
     ALL = "all"
     OPEN = "("
     CLOSE = ")"
